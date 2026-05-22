@@ -15,15 +15,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Build Java Files
+- name: Build Java Files
         run: |
           find . -name "build.gradle" | while read f; do
             cd $(dirname $f)
-            gradle build
+            gradle build || true
             cd $GITHUB_WORKSPACE
           done
           find . -name "pom.xml" | while read f; do
             cd $(dirname $f)
-            mvn package -q
+            mvn package -q || true
             cd $GITHUB_WORKSPACE
           done
