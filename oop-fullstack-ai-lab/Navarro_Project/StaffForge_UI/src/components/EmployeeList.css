@@ -1,0 +1,174 @@
+/* EmployeeList.css */
+
+.employee-list {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.employee-list h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.employee-list table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--bg-white);
+}
+
+.employee-list thead {
+  background-color: var(--bg-light);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.employee-list th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.employee-list tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+
+.employee-list tbody tr:hover {
+  background-color: var(--bg-light);
+}
+
+.employee-list td {
+  padding: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.employee-list td:first-child {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.employee-list .actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.employee-list .edit-btn,
+.employee-list .delete-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.employee-list .edit-btn {
+  background-color: var(--primary-light);
+  color: white;
+}
+
+.employee-list .edit-btn:hover:not(:disabled) {
+  background-color: var(--primary-dark);
+}
+
+.employee-list .delete-btn {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.employee-list .delete-btn:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.employee-list button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.empty-state {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-state p {
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .employee-list {
+    padding: 1rem;
+  }
+
+  .employee-list th,
+  .employee-list td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .employee-list th {
+    font-size: 0.75rem;
+  }
+
+  .employee-list .actions {
+    gap: 0.25rem;
+    flex-direction: column;
+  }
+
+  .employee-list .edit-btn,
+  .employee-list .delete-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .table-container {
+    font-size: 0.9rem;
+  }
+
+  .employee-list th,
+  .employee-list td {
+    padding: 0.5rem 0.35rem;
+    font-size: 0.8rem;
+  }
+
+  .employee-list th {
+    font-size: 0.65rem;
+  }
+
+  .employee-list .actions {
+    gap: 0.2rem;
+  }
+
+  .employee-list .edit-btn,
+  .employee-list .delete-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.65rem;
+  }
+}
