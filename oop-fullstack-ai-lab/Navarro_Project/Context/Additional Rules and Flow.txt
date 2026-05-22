@@ -1,0 +1,6 @@
+Additional Rules:
+1. Create unit tests for our code.
+2. Create and update a change.log file for our new changes.
+3. Create a summary for every new feature added.
+4. Always ask for confirmation before starting a new feature.
+5. Before making a feature as completed, always fix build erros.

@@ -1,0 +1,818 @@
+# StaffForge — Vibe Coding Context & Guide
+
+---
+
+## 🧠 The Mindset Before You Type
+
+> Before writing a single line of code, internalize this:
+> **"I am not writing code. I am defining responsibilities."**
+
+Every file you create answers one question:
+**"What is the ONE job of this piece?"**
+
+If you can't answer it in one sentence — split it.
+
+---
+
+## 🌊 The StaffForge Vibe
+
+```
+Think in layers.
+Each layer talks only to the layer directly below it.
+No layer skips a level.
+No layer does another layer's job.
+
+Controller  →  asks Service
+Service     →  asks Repository
+Repository  →  asks Database
+
+Component   →  asks Hook
+Hook        →  asks Service
+Service     →  asks Backend
+```
+
+> **The golden rule of StaffForge:**
+> *"If you're in a controller and you're writing an if-statement about business logic — stop. You're in the wrong layer."*
+
+---
+
+## 📁 File-by-File Vibe Guide
+
+---
+
+### 🗂️ BACKEND
+
+---
+
+#### `Employee.java` — *"I am just data. I don't think."*
+
+```
+Vibe: A dumb container.
+      It holds fields. It has getters and setters.
+      It does NOT validate. It does NOT call anything.
+      It just IS.
+```
+
+```java
+// ✅ This file should feel like filling out a form template
+@Entity
+@Table(name = "employees")
+public class Employee {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String firstName;
+
+    @Column(nullable = false)
+    private String lastName;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false)
+    private String department;
+
+    @Column(nullable = false)
+    private String position;
+
+    // No-arg constructor (required by JPA)
+    public Employee() {}
+
+    // All-arg constructor
+    public Employee(String firstName, String lastName,
+                    String email, String department, String position) {
+        this.firstName = firstName;
+        this.lastName  = lastName;
+        this.email     = email;
+        this.department = department;
+        this.position  = position;
+    }
+
+    // Getters & Setters only — no logic here
+    public Long getId() { return id; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    public String getPosition() { return position; }
+    public void setPosition(String position) { this.position = position; }
+}
+```
+
+**🚫 Vibe violations to avoid:**
+```java
+// NEVER do this inside Employee.java
+public boolean isValidEmail() { ... }     // logic — not your job
+public void save() { ... }               // persistence — not your job
+public String toJson() { ... }           // serialization — not your job
+```
+
+---
+
+#### `EmployeeDTO.java` — *"I am the face of the API. I control what the outside world sees."*
+
+```
+Vibe: A bouncer at the door.
+      The Entity is the VIP inside.
+      The DTO decides what information leaves the building.
+      Never let the raw Entity walk out the front door.
+```
+
+```java
+// ✅ Clean API contract — decoupled from DB concerns
+public class EmployeeDTO {
+
+    private Long id;
+    private String firstName;
+    private String lastName;
+    private String email;
+    private String department;
+    private String position;
+
+    public EmployeeDTO() {}
+
+    public EmployeeDTO(Long id, String firstName, String lastName,
+                       String email, String department, String position) {
+        this.id         = id;
+        this.firstName  = firstName;
+        this.lastName   = lastName;
+        this.email      = email;
+        this.department = department;
+        this.position   = position;
+    }
+
+    // Getters & Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    public String getPosition() { return position; }
+    public void setPosition(String position) { this.position = position; }
+}
+```
+
+**🧠 Mapping vibe — always convert explicitly:**
+```java
+// Entity → DTO  (outgoing)
+private EmployeeDTO toDTO(Employee e) {
+    return new EmployeeDTO(
+        e.getId(), e.getFirstName(), e.getLastName(),
+        e.getEmail(), e.getDepartment(), e.getPosition()
+    );
+}
+
+// DTO → Entity  (incoming)
+private Employee toEntity(EmployeeDTO dto) {
+    return new Employee(
+        dto.getFirstName(), dto.getLastName(),
+        dto.getEmail(), dto.getDepartment(), dto.getPosition()
+    );
+}
+```
+
+---
+
+#### `EmployeeRepository.java` — *"I am the only one allowed to touch the database."*
+
+```
+Vibe: A vault door.
+      Only you open it. Nobody else goes in directly.
+      You don't think — you just fetch and store on command.
+```
+
+```java
+// ✅ This file should be almost empty — that's the point
+@Repository
+public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+    // JpaRepository already gives you:
+    // findAll(), findById(), save(), deleteById(), existsById()
+    //
+    // For MVP — nothing more is needed here.
+    // Resist the urge to add methods that belong in the Service.
+}
+```
+
+**🧠 OOP note:**
+```
+JpaRepository<Employee, Long>
+    ↑
+    This is Polymorphism in action.
+    Spring injects a concrete implementation at runtime.
+    You never write the SQL. You never see the implementation.
+    That IS abstraction.
+```
+
+---
+
+#### `EmployeeService.java` — *"I am the contract. I define what is possible."*
+
+```
+Vibe: A job description.
+      It lists exactly what this domain can do.
+      It makes zero promises about HOW it's done.
+      The controller reads this and knows everything it needs.
+```
+
+```java
+// ✅ Interface only — no implementation details
+public interface EmployeeService {
+    List<EmployeeDTO> getAllEmployees();
+    EmployeeDTO       getEmployeeById(Long id);
+    EmployeeDTO       createEmployee(EmployeeDTO dto);
+    EmployeeDTO       updateEmployee(Long id, EmployeeDTO dto);
+    void              deleteEmployee(Long id);
+}
+```
+
+**🧠 Why this matters:**
+```
+When the Controller sees EmployeeService —
+it knows exactly what it can ask for.
+It doesn't know (or care) how it's done.
+This is the essence of Abstraction.
+```
+
+---
+
+#### `EmployeeServiceImpl.java` — *"I am where thinking happens. I own the business rules."*
+
+```
+Vibe: The brain of the operation.
+      Everyone asks me questions.
+      I ask the Repository for data.
+      I apply rules. I return answers.
+      I never talk to HTTP. I never write SQL.
+```
+
+```java
+@Service
+public class EmployeeServiceImpl implements EmployeeService {
+
+    private final EmployeeRepository employeeRepository;
+
+    // Constructor injection — always
+    public EmployeeServiceImpl(EmployeeRepository employeeRepository) {
+        this.employeeRepository = employeeRepository;
+    }
+
+    @Override
+    public List<EmployeeDTO> getAllEmployees() {
+        return employeeRepository.findAll()
+                                 .stream()
+                                 .map(this::toDTO)
+                                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public EmployeeDTO getEmployeeById(Long id) {
+        Employee employee = employeeRepository.findById(id)
+            .orElseThrow(() ->
+                new RuntimeException("Employee not found with id: " + id));
+        return toDTO(employee);
+    }
+
+    @Override
+    public EmployeeDTO createEmployee(EmployeeDTO dto) {
+        Employee saved = employeeRepository.save(toEntity(dto));
+        return toDTO(saved);
+    }
+
+    @Override
+    public EmployeeDTO updateEmployee(Long id, EmployeeDTO dto) {
+        Employee existing = employeeRepository.findById(id)
+            .orElseThrow(() ->
+                new RuntimeException("Employee not found with id: " + id));
+
+        existing.setFirstName(dto.getFirstName());
+        existing.setLastName(dto.getLastName());
+        existing.setEmail(dto.getEmail());
+        existing.setDepartment(dto.getDepartment());
+        existing.setPosition(dto.getPosition());
+
+        return toDTO(employeeRepository.save(existing));
+    }
+
+    @Override
+    public void deleteEmployee(Long id) {
+        Employee existing = employeeRepository.findById(id)
+            .orElseThrow(() ->
+                new RuntimeException("Employee not found with id: " + id));
+        employeeRepository.delete(existing);
+    }
+
+    // Private mappers — internal tools, not exposed
+    private EmployeeDTO toDTO(Employee e) {
+        return new EmployeeDTO(
+            e.getId(), e.getFirstName(), e.getLastName(),
+            e.getEmail(), e.getDepartment(), e.getPosition()
+        );
+    }
+
+    private Employee toEntity(EmployeeDTO dto) {
+        return new Employee(
+            dto.getFirstName(), dto.getLastName(),
+            dto.getEmail(), dto.getDepartment(), dto.getPosition()
+        );
+    }
+}
+```
+
+**🚫 Vibe violations to avoid:**
+```java
+// NEVER do this in ServiceImpl
+@Override
+public EmployeeDTO createEmployee(EmployeeDTO dto) {
+    HttpServletRequest req = ...  // ❌ HTTP concern — not your job
+    System.out.println("Saving..."); // ❌ use a logger or nothing
+    return ResponseEntity.ok(...);   // ❌ HTTP response — not your job
+}
+```
+
+---
+
+#### `EmployeeController.java` — *"I receive requests. I delegate. I respond. That's it."*
+
+```
+Vibe: A receptionist.
+      Someone walks in, you take their request,
+      hand it to the right person (Service),
+      and relay the answer back.
+      You don't do the work yourself.
+```
+
+```java
+@RestController
+@RequestMapping("/api/employees")
+@CrossOrigin(origins = "http://localhost:5173")
+public class EmployeeController {
+
+    private final EmployeeService employeeService;
+
+    public EmployeeController(EmployeeService employeeService) {
+        this.employeeService = employeeService;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<EmployeeDTO>> getAll() {
+        return ResponseEntity.ok(employeeService.getAllEmployees());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<EmployeeDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.getEmployeeById(id));
+    }
+
+    @PostMapping
+    public ResponseEntity<EmployeeDTO> create(@RequestBody EmployeeDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                             .body(employeeService.createEmployee(dto));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<EmployeeDTO> update(@PathVariable Long id,
+                                               @RequestBody EmployeeDTO dto) {
+        return ResponseEntity.ok(employeeService.updateEmployee(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        employeeService.deleteEmployee(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+```
+
+**🧠 Controller vibe check:**
+```
+Each method should read like a sentence:
+"Get all employees and return 200."
+"Create an employee and return 201."
+"Delete an employee and return 204."
+
+If your method is longer than 5 lines — you've leaked logic in.
+Move it to the Service.
+```
+
+---
+
+### 🗂️ FRONTEND
+
+---
+
+#### `Employee.ts` — *"I am the shape of truth on the frontend."*
+
+```
+Vibe: A blueprint.
+      Every component, hook, and service
+      speaks this language.
+      Never pass raw objects around.
+      Always speak Employee.
+```
+
+```typescript
+// types/Employee.ts
+export interface Employee {
+  id?:         number;   // optional — doesn't exist before creation
+  firstName:   string;
+  lastName:    string;
+  email:       string;
+  department:  string;
+  position:    string;
+}
+
+// Empty employee factory — use when initializing forms
+export const emptyEmployee = (): Employee => ({
+  firstName:  '',
+  lastName:   '',
+  email:      '',
+  department: '',
+  position:   '',
+});
+```
+
+---
+
+#### `employeeService.ts` — *"I am the only door to the backend."*
+
+```
+Vibe: A translator.
+      The frontend speaks TypeScript.
+      The backend speaks HTTP.
+      I translate between them.
+      Nobody else touches axios.
+```
+
+```typescript
+// services/employeeService.ts
+import axios from 'axios';
+import { Employee } from '../types/Employee';
+
+const BASE_URL = 'http://localhost:8080/api/employees';
+
+const api = axios.create({ baseURL: BASE_URL });
+
+const getAllEmployees = async (): Promise<Employee[]> => {
+  const response = await api.get<Employee[]>('/');
+  return response.data;
+};
+
+const getEmployeeById = async (id: number): Promise<Employee> => {
+  const response = await api.get<Employee>(`/${id}`);
+  return response.data;
+};
+
+const createEmployee = async (data: Employee): Promise<Employee> => {
+  const response = await api.post<Employee>('/', data);
+  return response.data;
+};
+
+const updateEmployee = async (id: number, data: Employee): Promise<Employee> => {
+  const response = await api.put<Employee>(`/${id}`, data);
+  return response.data;
+};
+
+const deleteEmployee = async (id: number): Promise<void> => {
+  await api.delete(`/${id}`);
+};
+
+// Export as object — Facade Pattern
+export const employeeService = {
+  getAllEmployees,
+  getEmployeeById,
+  createEmployee,
+  updateEmployee,
+  deleteEmployee,
+};
+```
+
+**🚫 Vibe violations to avoid:**
+```typescript
+// NEVER in a component
+const res = await axios.get('http://localhost:8080/api/employees');  // ❌
+fetch('http://localhost:8080/api/employees').then(...)               // ❌
+
+// ALWAYS through the service
+const employees = await employeeService.getAllEmployees();            // ✅
+```
+
+---
+
+#### `useEmployees.ts` — *"I manage what the UI knows and when it knows it."*
+
+```
+Vibe: The state brain.
+      Components are dumb displays.
+      I tell them what to show.
+      I handle loading, errors, and data.
+      Components just call my functions.
+```
+
+```typescript
+// hooks/useEmployees.ts
+import { useState, useEffect, useCallback } from 'react';
+import { Employee } from '../types/Employee';
+import { employeeService } from '../services/employeeService';
+
+export const useEmployees = () => {
+
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading,   setLoading]   = useState<boolean>(false);
+  const [error,     setError]     = useState<string | null>(null);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await employeeService.getAllEmployees();
+      setEmployees(data);
+    } catch {
+      setError('Failed to fetch employees.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const addEmployee = async (data: Employee): Promise<void> => {
+    await employeeService.createEmployee(data);
+    await fetchAll(); // refresh list
+  };
+
+  const editEmployee = async (id: number, data: Employee): Promise<void> => {
+    await employeeService.updateEmployee(id, data);
+    await fetchAll();
+  };
+
+  const removeEmployee = async (id: number): Promise<void> => {
+    await employeeService.deleteEmployee(id);
+    await fetchAll();
+  };
+
+  // Fetch on mount
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Expose only what components need
+  return { employees, loading, error, fetchAll,
+           addEmployee, editEmployee, removeEmployee };
+};
+```
+
+**🧠 Encapsulation vibe check:**
+```
+setEmployees  →  stays inside the hook  (private)
+setLoading    →  stays inside the hook  (private)
+setError      →  stays inside the hook  (private)
+
+employees     →  exposed  (read-only view)
+addEmployee   →  exposed  (controlled action)
+removeEmployee→  exposed  (controlled action)
+
+Components cannot directly mutate state.
+They can only call controlled actions.
+That IS encapsulation.
+```
+
+---
+
+#### `EmployeeForm.tsx` — *"I own my own input state. I ask nothing from outside."*
+
+```
+Vibe: A self-contained input machine.
+      Give me an onSubmit callback.
+      Give me optional initialData for edit mode.
+      I handle the rest internally.
+      When done — I call you back with clean data.
+```
+
+```typescript
+// components/EmployeeForm.tsx
+import { useState, useEffect } from 'react';
+import { Employee, emptyEmployee } from '../types/Employee';
+
+interface Props {
+  onSubmit:     (data: Employee) => void;
+  initialData?: Employee;
+  onCancel?:    () => void;
+}
+
+export const EmployeeForm = ({ onSubmit, initialData, onCancel }: Props) => {
+
+  const [form, setForm] = useState<Employee>(emptyEmployee());
+
+  // Sync initialData when editing
+  useEffect(() => {
+    setForm(initialData ?? emptyEmployee());
+  }, [initialData]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(form);
+    setForm(emptyEmployee()); // reset after submit
+  };
+
+  const isEditMode = Boolean(initialData?.id);
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2>{isEditMode ? 'Update Employee' : 'Add Employee'}</h2>
+
+      {(['firstName','lastName','email','department','position'] as const).map(field => (
+        <div key={field}>
+          <label htmlFor={field}>{field}</label>
+          <input
+            id={field}
+            name={field}
+            value={form[field]}
+            onChange={handleChange}
+            required
+          />
+        </div>
+      ))}
+
+      <button type="submit">
+        {isEditMode ? 'Update Employee' : 'Add Employee'}
+      </button>
+
+      {onCancel && (
+        <button type="button" onClick={onCancel}>Cancel</button>
+      )}
+    </form>
+  );
+};
+```
+
+---
+
+#### `EmployeeList.tsx` — *"I display. I do not decide."*
+
+```
+Vibe: A bulletin board.
+      You hand me data — I display it.
+      You hand me callbacks — I wire them to buttons.
+      I have zero opinion about what happens next.
+```
+
+```typescript
+// components/EmployeeList.tsx
+import { Employee } from '../types/Employee';
+
+interface Props {
+  employees: Employee[];
+  onEdit:    (employee: Employee) => void;
+  onDelete:  (id: number) => void;
+}
+
+export const EmployeeList = ({ employees, onEdit, onDelete }: Props) => {
+
+  if (employees.length === 0) {
+    return <p>No employees found.</p>;
+  }
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Email</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {employees.map(emp => (
+          <tr key={emp.id}>
+            <td>{emp.firstName}</td>
+            <td>{emp.lastName}</td>
+            <td>{emp.email}</td>
+            <td>{emp.department}</td>
+            <td>{emp.position}</td>
+            <td>
+              <button onClick={() => onEdit(emp)}>Edit</button>
+              <button onClick={() => onDelete(emp.id!)}>Delete</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+```
+
+---
+
+#### `App.tsx` — *"I am the conductor. I connect everyone. I play nothing myself."*
+
+```
+Vibe: An orchestra conductor.
+      You don't play an instrument.
+      You make sure everyone plays at the right time.
+      You manage who is on stage (selected employee).
+      You pass the right callbacks to the right components.
+```
+
+```typescript
+// App.tsx
+import { useState } from 'react';
+import { useEmployees } from './hooks/useEmployees';
+import { EmployeeForm } from './components/EmployeeForm';
+import { EmployeeList } from './components/EmployeeList';
+import { Employee } from './types/Employee';
+
+function App() {
+  const { employees, loading, error,
+          addEmployee, editEmployee, removeEmployee } = useEmployees();
+
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | undefined>();
+
+  const handleSubmit = async (data: Employee) => {
+    if (selectedEmployee?.id) {
+      await editEmployee(selectedEmployee.id, data);
+    } else {
+      await addEmployee(data);
+    }
+    setSelectedEmployee(undefined); // exit edit mode
+  };
+
+  const handleEdit = (employee: Employee) => {
+    setSelectedEmployee(employee);
+  };
+
+  const handleCancel = () => {
+    setSelectedEmployee(undefined);
+  };
+
+  return (
+    <div>
+      <h1>StaffForge</h1>
+
+      <EmployeeForm
+        onSubmit={handleSubmit}
+        initialData={selectedEmployee}
+        onCancel={selectedEmployee ? handleCancel : undefined}
+      />
+
+      {loading && <p>Loading...</p>}
+      {error   && <p style={{ color: 'red' }}>{error}</p>}
+
+      <EmployeeList
+        employees={employees}
+        onEdit={handleEdit}
+        onDelete={removeEmployee}
+      />
+    </div>
+  );
+}
+
+export default App;
+```
+
+---
+
+## 🧭 The StaffForge Vibe Cheat Sheet
+
+```
+BACKEND QUESTION                   ANSWER
+─────────────────────────────────────────────────────
+Where does HTTP logic live?    →   Controller only
+Where does business logic live? →  ServiceImpl only
+Where does DB access live?     →   Repository only
+What crosses the API boundary? →   DTO only (never Entity)
+Who depends on who?            →   Always depend on interfaces
+
+FRONTEND QUESTION                  ANSWER
+─────────────────────────────────────────────────────
+Who calls axios?               →   employeeService only
+Who manages state?             →   useEmployees hook only
+Who renders UI?                →   Components only
+Who wires everything together? →   App.tsx only
+What type is shared everywhere?→   Employee interface only
+
+UNIVERSAL VIBE CHECK
+─────────────────────────────────────────────────────
+Am I in the right layer?       →   If unsure, move it down
+Is this file doing two jobs?   →   Split it
+Am I exposing internals?       →   Make it private
+Am I depending on a class?     →   Depend on an interface
+Is this method over 10 lines?  →   Extract it
+```
+
+> **The StaffForge Vibe in one line:**
+> *Each piece of code should be so focused on its single job that reading it feels obvious — like it couldn't possibly belong anywhere else.*

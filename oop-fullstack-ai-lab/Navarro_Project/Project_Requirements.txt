@@ -1,0 +1,346 @@
+# Low-Level Technical Requirements
+## OOP Full-Stack Lab — Employee Management (MVP)
+
+---
+
+## 📐 Architecture Overview
+
+```s
+employee-management/
+├── backend/                          # Spring Boot (Gradle)
+│   ├── build.gradle
+│   ├── settings.gradle
+│   └── src/main/java/com/lab/employee/
+│       ├── EmployeeApplication.java
+│       ├── entity/
+│       │   └── Employee.java
+│       ├── repository/
+│       │   └── EmployeeRepository.java
+│       ├── service/
+│       │   ├── EmployeeService.java       # Interface
+│       │   └── EmployeeServiceImpl.java
+│       ├── controller/
+│       │   └── EmployeeController.java
+│       └── dto/
+│           └── EmployeeDTO.java
+│   └── src/main/resources/
+│       └── application.properties
+│
+└── frontend/                         # React + Vite + TypeScript
+    ├── package.json
+    └── src/
+        ├── main.tsx
+        ├── App.tsx
+        ├── types/
+        │   └── Employee.ts
+        ├── services/
+        │   └── employeeService.ts
+        ├── components/
+        │   ├── EmployeeList.tsx
+        │   └── EmployeeForm.tsx
+        └── hooks/
+            └── useEmployees.ts
+```
+
+---
+
+## 🗂️ PRIORITY TIERS
+
+| Tier | Label | Description |
+|------|-------|-------------|
+| P0 | **Blocker** | App cannot run without this |
+| P1 | **MVP Core** | Required for working CRUD |
+| P2 | **MVP Polish** | Completes the exercise goals |
+
+---
+
+## ⚙️ BACKEND REQUIREMENTS
+
+### P0 — Project Bootstrap
+
+**BR-001 — Gradle Project Setup**
+- Use Gradle (Groovy DSL) with `build.gradle`
+- Dependencies required:
+  - `spring-boot-starter-web`
+  - `spring-boot-starter-data-jpa`
+  - `postgresql` (runtime)
+  - `lombok` (optional, reduces boilerplate)
+- Java version: 17+
+- Plugin: `org.springframework.boot` + `io.spring.dependency-management`
+
+**BR-002 — Application Entry Point**
+- Class: `EmployeeApplication.java`
+- Annotate with `@SpringBootApplication`
+- Contains standard `main()` method
+
+**BR-003 — Database Configuration**
+- File: `src/main/resources/application.properties`
+- Required properties:
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/employeedb
+spring.datasource.username=postgres
+spring.datasource.password=yourpassword
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+server.port=8080
+```
+
+---
+
+### P1 — Entity Layer
+
+**BR-004 — Employee Entity**
+- Class: `entity/Employee.java`
+- Annotate with `@Entity`, `@Table(name = "employees")`
+- OOP Rule: All fields must be `private` (Encapsulation)
+- Fields:
+
+| Field | Type | Constraint |
+|-------|------|------------|
+| `id` | `Long` | `@Id`, `@GeneratedValue(strategy = IDENTITY)` |
+| `firstName` | `String` | `@Column(nullable = false)` |
+| `lastName` | `String` | `@Column(nullable = false)` |
+| `email` | `String` | `@Column(nullable = false, unique = true)` |
+| `department` | `String` | `@Column(nullable = false)` |
+| `position` | `String` | `@Column(nullable = false)` |
+
+- Must include: getters, setters, no-arg constructor, all-arg constructor
+- JPA will auto-create the `employees` table on startup
+
+---
+
+### P1 — DTO Layer
+
+**BR-005 — EmployeeDTO**
+- Class: `dto/EmployeeDTO.java`
+- Mirrors Employee fields (excluding internal JPA concerns)
+- Purpose: Decouples API contract from database entity
+- Must include: getters, setters, constructors
+
+---
+
+### P1 — Repository Layer
+
+**BR-006 — EmployeeRepository**
+- Interface: `repository/EmployeeRepository.java`
+- Extends `JpaRepository<Employee, Long>`
+- No additional methods needed for MVP
+- OOP Rule: Demonstrates **Abstraction** — CRUD operations are inherited, not manually written
+- OOP Rule: Demonstrates **Polymorphism** — Spring provides the concrete implementation at runtime
+
+---
+
+### P1 — Service Layer
+
+**BR-007 — EmployeeService Interface**
+- Interface: `service/EmployeeService.java`
+- Declare the following method signatures:
+
+```java
+List<EmployeeDTO> getAllEmployees();
+EmployeeDTO getEmployeeById(Long id);
+EmployeeDTO createEmployee(EmployeeDTO dto);
+EmployeeDTO updateEmployee(Long id, EmployeeDTO dto);
+void deleteEmployee(Long id);
+```
+
+- OOP Rule: Interface enforces **Abstraction** — controller depends on contract, not implementation
+
+**BR-008 — EmployeeServiceImpl**
+- Class: `service/EmployeeServiceImpl.java`
+- Implements `EmployeeService`
+- Annotate with `@Service`
+- Inject `EmployeeRepository` via constructor injection (`@RequiredArgsConstructor` or manual)
+- Method behavior:
+
+| Method | Behavior |
+|--------|----------|
+| `getAllEmployees()` | Fetch all, map to DTO list |
+| `getEmployeeById(id)` | Find by ID, throw `RuntimeException` if not found |
+| `createEmployee(dto)` | Map DTO → Entity, save, map back to DTO |
+| `updateEmployee(id, dto)` | Find entity, update fields, save, return DTO |
+| `deleteEmployee(id)` | Find entity, call `repository.delete()` |
+
+- OOP Rule: Demonstrates **Separation of Concerns** — business logic lives here, not in the controller
+
+---
+
+### P1 — Controller Layer
+
+**BR-009 — EmployeeController**
+- Class: `controller/EmployeeController.java`
+- Annotate with `@RestController`, `@RequestMapping("/api/employees")`
+- Inject `EmployeeService` via constructor
+- Required endpoints:
+
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `GET` | `/api/employees` | Get all employees | `200 OK` |
+| `GET` | `/api/employees/{id}` | Get by ID | `200 OK` |
+| `POST` | `/api/employees` | Create employee | `201 Created` |
+| `PUT` | `/api/employees/{id}` | Update employee | `200 OK` |
+| `DELETE` | `/api/employees/{id}` | Delete employee | `204 No Content` |
+
+**BR-010 — CORS Configuration**
+- Add `@CrossOrigin(origins = "http://localhost:5173")` on the controller
+- Allows the Vite dev server to communicate with Spring Boot
+
+---
+
+## 🌐 FRONTEND REQUIREMENTS
+
+### P0 — Project Bootstrap
+
+**FR-001 — Vite + React + TypeScript Setup**
+- Bootstrap using: `npm create vite@latest frontend -- --template react-ts`
+- Install dependency: `axios`
+- `npm install axios`
+- Dev server runs on: `http://localhost:5173`
+
+---
+
+### P1 — Type Definitions
+
+**FR-002 — Employee Type**
+- File: `src/types/Employee.ts`
+- Define and export:
+
+```typescript
+export interface Employee {
+  id?: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  position: string;
+}
+```
+
+- OOP Rule: Enforces **Encapsulation** — all components use this contract
+
+---
+
+### P1 — Service Layer
+
+**FR-003 — employeeService.ts**
+- File: `src/services/employeeService.ts`
+- Uses `axios` with base URL `http://localhost:8080/api/employees`
+- Export the following functions:
+
+| Function | HTTP | Description |
+|----------|------|-------------|
+| `getAllEmployees()` | GET | Returns `Promise<Employee[]>` |
+| `getEmployeeById(id)` | GET | Returns `Promise<Employee>` |
+| `createEmployee(data)` | POST | Returns `Promise<Employee>` |
+| `updateEmployee(id, data)` | PUT | Returns `Promise<Employee>` |
+| `deleteEmployee(id)` | DELETE | Returns `Promise<void>` |
+
+- OOP Rule: Demonstrates **Abstraction** — components never call `axios` directly
+- OOP Rule: Demonstrates **Separation of Concerns** — HTTP logic is isolated here
+
+---
+
+### P1 — State Management Hook
+
+**FR-004 — useEmployees Custom Hook**
+- File: `src/hooks/useEmployees.ts`
+- Manages all employee state and operations
+- Exposes:
+
+```typescript
+employees: Employee[]
+loading: boolean
+error: string | null
+fetchAll: () => void
+addEmployee: (data: Employee) => Promise<void>
+editEmployee: (id: number, data: Employee) => Promise<void>
+removeEmployee: (id: number) => Promise<void>
+```
+
+- OOP Rule: Demonstrates **Encapsulation** — state logic is hidden from UI components
+
+---
+
+### P1 — Components
+
+**FR-005 — EmployeeList Component**
+- File: `src/components/EmployeeList.tsx`
+- Props: `employees`, `onEdit`, `onDelete`
+- Renders a table with columns: First Name, Last Name, Email, Department, Position, Actions
+- Each row has **Edit** and **Delete** buttons
+- Shows loading state while fetching
+
+**FR-006 — EmployeeForm Component**
+- File: `src/components/EmployeeForm.tsx`
+- Props: `onSubmit`, `initialData` (optional, for edit mode), `onCancel`
+- Controlled inputs for all fields: `firstName`, `lastName`, `email`, `department`, `position`
+- Submit button label: **"Add Employee"** (create) / **"Update Employee"** (edit)
+- On submit: calls `onSubmit(formData)` then resets form
+- OOP Rule: Demonstrates **Encapsulation** — form state lives inside this component
+
+---
+
+### P1 — App Root
+
+**FR-007 — App.tsx**
+- Consumes `useEmployees` hook
+- Manages `selectedEmployee` state for edit mode
+- Renders `EmployeeForm` and `EmployeeList`
+- Wires up all handler callbacks between hook and components
+- OOP Rule: Demonstrates **Separation of Concerns** — App orchestrates, components render
+
+---
+
+## 🐘 DATABASE REQUIREMENTS
+
+### P0 — PostgreSQL Setup
+
+**DB-001 — Database Initialization**
+- Create database manually before first run:
+```sql
+CREATE DATABASE employeedb;
+```
+- JPA handles table creation automatically via `ddl-auto=update`
+- No migration scripts needed for MVP
+
+---
+
+## 🔗 INTEGRATION REQUIREMENTS
+
+### P2 — End-to-End Validation Checklist
+
+| # | Test | Expected Result |
+|---|------|----------------|
+| 1 | Start PostgreSQL | DB accepts connections on port 5432 |
+| 2 | Run `./gradlew bootRun` | Spring Boot starts on port 8080 |
+| 3 | Run `npm run dev` | Vite starts on port 5173 |
+| 4 | Open browser | Employee list loads (empty or with data) |
+| 5 | Submit Add form | New employee appears in list |
+| 6 | Click Edit | Form pre-fills with employee data |
+| 7 | Submit Edit form | Employee row updates in list |
+| 8 | Click Delete | Employee removed from list |
+| 9 | Restart backend | Data persists after restart |
+
+---
+
+## 📋 IMPLEMENTATION ORDER (MVP Build Sequence)
+
+```
+Phase 1 — Infrastructure
+  DB-001 → BR-001 → BR-002 → BR-003
+
+Phase 2 — Backend Core
+  BR-004 → BR-005 → BR-006 → BR-007 → BR-008 → BR-009 → BR-010
+
+Phase 3 — Frontend Core
+  FR-001 → FR-002 → FR-003 → FR-004 → FR-005 → FR-006 → FR-007
+
+Phase 4 — Integration Smoke Test
+  Run checklist from INT-001
+```
+
+> **Rule of thumb:** Backend must be fully runnable and testable (via browser or Postman) before starting the frontend.

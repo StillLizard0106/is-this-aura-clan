@@ -1,0 +1,705 @@
+# StaffForge Backend - Change Log
+
+---
+
+## Release: 2026-05-22 — Backend Foundation (P0/P1)
+
+### Type: Feature
+### Priority: P0 - P1 (Blocker & MVP Core)
+
+---
+
+## Summary
+
+Completed full backend foundation implementation for StaffForge Employee Management MVP.
+All layers follow the StaffForge Vibe: clean separation of concerns, proper OOP principles, and layered architecture.
+
+---
+
+## Changes Implemented
+
+### 1. Database Configuration (BR-003)
+- **File**: `src/main/resources/application.properties`
+- **Changes**:
+  - Added PostgreSQL connection URL: `jdbc:postgresql://localhost:5432/employeedb`
+  - Configured Spring JPA with Hibernate DDL auto-update strategy
+  - Set up PostgreSQL dialect and SQL logging
+  - Configured server port to 8080
+
+**Requirement**: PostgreSQL server must be running with a database named `employeedb`
+
+---
+
+### 2. Entity Layer (BR-004)
+- **File**: `src/main/java/com/project/entity/Employee.java`
+- **Changes**:
+  - Created `@Entity` class with `@Table(name = "employees")`
+  - Defined 6 fields: `id`, `firstName`, `lastName`, `email`, `department`, `position`
+  - Applied JPA annotations: `@Id`, `@GeneratedValue`, `@Column` with constraints
+  - Generated constructors, getters, setters, toString()
+  - Used Lombok: `@NoArgsConstructor`, `@AllArgsConstructor`
+
+**Vibe**: "I am just data. I don't think."
+- Pure data container with no validation or business logic
+- All fields private (Encapsulation)
+- JPA automatically creates the `employees` table on startup
+
+**OOP Principles Demonstrated**:
+- ✅ Encapsulation (private fields)
+- ✅ Single Responsibility (data holder)
+
+---
+
+### 3. DTO Layer (BR-005)
+- **File**: `src/main/java/com/project/dto/EmployeeDTO.java`
+- **Changes**:
+  - Created data transfer object mirroring Employee fields
+  - No JPA annotations (decoupled from persistence logic)
+  - Constructors, getters, setters, toString()
+  - Used Lombok annotations: `@NoArgsConstructor`, `@AllArgsConstructor`
+
+**Vibe**: "I am the API contract."
+- Decouples REST API from database entity structure
+- Allows flexibility to change internal entity without affecting API clients
+
+**OOP Principles Demonstrated**:
+- ✅ Abstraction (hides JPA implementation)
+- ✅ Separation of Concerns (API contract isolated)
+
+---
+
+### 4. Repository Layer (BR-006)
+- **File**: `src/main/java/com/project/repository/EmployeeRepository.java`
+- **Changes**:
+  - Created interface extending `JpaRepository<Employee, Long>`
+  - Annotated with `@Repository`
+  - No custom methods needed for MVP (inherits CRUD operations)
+
+**Vibe**: "I only talk to the database."
+- Spring provides concrete implementation at runtime
+- CRUD operations: `findAll()`, `findById()`, `save()`, `delete()`
+
+**OOP Principles Demonstrated**:
+- ✅ Abstraction (CRUD operations inherited)
+- ✅ Polymorphism (Spring provides runtime implementation)
+- ✅ Inheritance (extends JpaRepository)
+
+---
+
+### 5. Service Interface (BR-007)
+- **File**: `src/main/java/com/project/service/EmployeeService.java`
+- **Changes**:
+  - Created interface with 5 method signatures:
+    - `getAllEmployees()` → `List<EmployeeDTO>`
+    - `getEmployeeById(Long id)` → `EmployeeDTO`
+    - `createEmployee(EmployeeDTO dto)` → `EmployeeDTO`
+    - `updateEmployee(Long id, EmployeeDTO dto)` → `EmployeeDTO`
+    - `deleteEmployee(Long id)` → `void`
+
+**Vibe**: "I define the contract."
+- Controller depends on interface, not concrete implementation
+
+**OOP Principles Demonstrated**:
+- ✅ Abstraction (defines service contract)
+- ✅ Polymorphism (interface enables multiple implementations)
+
+---
+
+### 6. Service Implementation (BR-008)
+- **File**: `src/main/java/com/project/service/EmployeeServiceImpl.java`
+- **Changes**:
+  - Implements `EmployeeService` interface
+  - Annotated with `@Service`
+  - Injected `EmployeeRepository` via constructor (used Lombok `@RequiredArgsConstructor`)
+  - Implemented all 5 methods with complete business logic:
+    - `getAllEmployees()`: Fetches all, maps to DTO list using stream
+    - `getEmployeeById(id)`: Finds by ID, throws RuntimeException if not found
+    - `createEmployee(dto)`: Maps DTO→Entity, saves, returns DTO
+    - `updateEmployee(id, dto)`: Finds entity, updates fields, saves, returns DTO
+    - `deleteEmployee(id)`: Finds and deletes entity
+  - Added helper methods:
+    - `mapToDTO(Employee)`: Convert Entity to DTO
+    - `mapToEntity(EmployeeDTO)`: Convert DTO to Entity
+
+**Vibe**: "I do the thinking. I apply business logic."
+- All business logic centralized here
+- DTO ↔ Entity mapping handled transparently
+
+**OOP Principles Demonstrated**:
+- ✅ Encapsulation (business logic hidden from controller)
+- ✅ Separation of Concerns (Controller → Service → Repository)
+- ✅ Single Responsibility (orchestrates entity/repo operations)
+
+---
+
+### 7. Controller Layer (BR-009 & BR-010)
+- **File**: `src/main/java/com/project/controller/EmployeeController.java`
+- **Changes**:
+  - Created REST controller with `@RestController`, `@RequestMapping("/api/employees")`
+  - Added CORS support: `@CrossOrigin(origins = "http://localhost:5173")`
+  - Injected `EmployeeService` via constructor (used Lombok `@RequiredArgsConstructor`)
+  - Implemented 5 REST endpoints:
+    - `GET /api/employees` → `200 OK` with list
+    - `GET /api/employees/{id}` → `200 OK` with single employee
+    - `POST /api/employees` → `201 Created` with created employee
+    - `PUT /api/employees/{id}` → `200 OK` with updated employee
+    - `DELETE /api/employees/{id}` → `204 No Content`
+
+**Vibe**: "I am just a translator. I receive HTTP, delegate to service, return HTTP."
+- No business logic in controller
+- Each endpoint is clean, focused, and calls service
+
+**OOP Principles Demonstrated**:
+- ✅ Abstraction (hides service implementation details)
+- ✅ Separation of Concerns (REST layer isolated)
+- ✅ Single Responsibility (HTTP translation only)
+
+---
+
+### 8. Unit Tests
+
+#### Service Tests (BR-007_Test)
+- **File**: `src/test/java/com/project/service/EmployeeServiceImplTest.java`
+- **Test Coverage**:
+  - ✅ `testGetAllEmployees()` - Verifies fetch and mapping
+  - ✅ `testGetEmployeeById_Success()` - Valid ID retrieval
+  - ✅ `testGetEmployeeById_NotFound()` - Exception on missing ID
+  - ✅ `testCreateEmployee()` - Creation and mapping
+  - ✅ `testUpdateEmployee_Success()` - Field updates
+  - ✅ `testUpdateEmployee_NotFound()` - Exception on missing ID
+  - ✅ `testDeleteEmployee_Success()` - Deletion verification
+  - ✅ `testDeleteEmployee_NotFound()` - Exception on missing ID
+- **Tools**: Mockito, JUnit 5
+
+#### Controller Tests (BR-009_Test)
+- **File**: `src/test/java/com/project/controller/EmployeeControllerTest.java`
+- **Test Coverage**:
+  - ✅ `testGetAllEmployees()` - HTTP 200 with list
+  - ✅ `testGetEmployeeById()` - HTTP 200 with employee
+  - ✅ `testCreateEmployee()` - HTTP 201 Created
+  - ✅ `testUpdateEmployee()` - HTTP 200 with updated employee
+  - ✅ `testDeleteEmployee()` - HTTP 204 No Content
+- **Tools**: MockMvc, Mockito, ObjectMapper
+
+#### Repository Tests (BR-006_Test)
+- **File**: `src/test/java/com/project/repository/EmployeeRepositoryTest.java`
+- **Test Coverage**:
+  - ✅ `testSaveEmployee()` - Persistence and ID generation
+  - ✅ `testFindEmployeeById()` - Successful retrieval
+  - ✅ `testFindEmployeeById_NotFound()` - Optional.empty() on missing ID
+  - ✅ `testUpdateEmployee()` - Field updates and persistence
+  - ✅ `testDeleteEmployee()` - Deletion and verification
+  - ✅ `testFindAllEmployees()` - Multiple record retrieval
+- **Tools**: Spring Data JPA tests, JUnit 5
+
+**Total Test Coverage**: 19 unit tests across 3 layers
+- All critical paths covered
+- Happy path and error scenarios included
+- Mocks used to isolate layers
+
+---
+
+## Architecture Verification
+
+✅ **Layer Hierarchy** (Golden Rule: No Skipping)
+```
+Controller → Service → Repository → Database
+```
+- Controller asks only Service
+- Service asks only Repository
+- Repository asks only Database
+
+✅ **Separation of Concerns**
+- Entity: Data only
+- DTO: API contract only
+- Repository: Database only
+- Service: Business logic only
+- Controller: HTTP translation only
+
+✅ **OOP Principles**
+- **Encapsulation**: Private fields, controlled access via getters/setters
+- **Abstraction**: DTOs hide entity structure; Service interface hides implementation
+- **Polymorphism**: Service interface allows Spring to inject implementation
+- **Inheritance**: Repository inherits from JpaRepository
+- **Single Responsibility**: Each class has one reason to change
+
+---
+
+## How to Test Locally
+
+### Prerequisites
+```bash
+# 1. Start PostgreSQL server
+# 2. Create database
+psql -U postgres -c "CREATE DATABASE employeedb;"
+
+# 3. Build the project
+cd StaffForge
+./gradlew build
+
+# 4. Run tests
+./gradlew test
+
+# 5. Start the application
+./gradlew bootRun
+```
+
+### Manual Testing
+```bash
+# Get all employees
+curl -X GET http://localhost:8080/api/employees
+
+# Create employee
+curl -X POST http://localhost:8080/api/employees \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john@example.com",
+    "department": "Engineering",
+    "position": "Software Engineer"
+  }'
+
+# Get employee by ID
+curl -X GET http://localhost:8080/api/employees/1
+
+# Update employee
+curl -X PUT http://localhost:8080/api/employees/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "email": "jane@example.com",
+    "department": "Marketing",
+    "position": "Marketing Manager"
+  }'
+
+# Delete employee
+curl -X DELETE http://localhost:8080/api/employees/1
+```
+
+---
+
+## Next Steps
+
+- [ ] Frontend implementation (React-TypeScript)
+- [ ] Integration testing (API end-to-end)
+- [ ] Docker containerization
+- [ ] Deployment configuration
+
+---
+
+**Authored**: GitHub Copilot  
+**Date**: 2026-05-22  
+**Status**: ✅ Complete & Tested
+
+---
+
+---
+
+## Release: 2026-05-22 — Frontend Foundation (P0/P1)
+
+### Type: Feature
+### Priority: P0 - P1 (Blocker & MVP Core)
+
+---
+
+## Summary
+
+Completed full frontend implementation for StaffForge Employee Management MVP.
+Built with React 19 + TypeScript + Vite, following the StaffForge Vibe: clean component architecture,
+proper separation of concerns, and full type safety. 
+
+All layers follow the principle: "I am not writing code. I am defining responsibilities."
+
+---
+
+## Changes Implemented
+
+### 1. Project Configuration (FR-001)
+
+#### `package.json`
+- **Added dependencies**:
+  - `axios` — HTTP client for backend communication
+  - `typescript` — Type safety
+  - `vitest` — Unit testing framework
+  - `@testing-library/react` — Component testing utilities
+- **Dev server**: Runs on `http://localhost:5173`
+
+#### TypeScript Configuration
+- **File**: `tsconfig.json`
+  - Strict mode enabled
+  - JSX support configured
+  - Module resolution: bundler
+- **File**: `tsconfig.app.json`
+  - Application-specific compiler options
+- **File**: `tsconfig.spec.json`
+  - Test-specific compiler options with Vitest globals
+
+---
+
+### 2. Type Definitions (FR-002)
+
+- **File**: `src/types/Employee.ts`
+- **Defines**:
+  ```typescript
+  interface Employee {
+    id?: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    department: string;
+    position: string;
+  }
+  ```
+
+**Vibe**: "I define the contract."
+- Strong typing across all components
+- Optional `id` field for create mode
+- Enforces Encapsulation through type safety
+
+**OOP Principles Demonstrated**:
+- ✅ Abstraction (hides implementation details)
+- ✅ Encapsulation (controlled access via type contract)
+
+---
+
+### 3. Service Layer (FR-003)
+
+- **File**: `src/services/employeeService.ts`
+- **Implemented** 5 async functions:
+  - `getAllEmployees()` → `Promise<Employee[]>`
+  - `getEmployeeById(id)` → `Promise<Employee>`
+  - `createEmployee(data)` → `Promise<Employee>`
+  - `updateEmployee(id, data)` → `Promise<Employee>`
+  - `deleteEmployee(id)` → `Promise<void>`
+
+**Vibe**: "I am the bridge to the backend."
+- Uses axios with base URL: `http://localhost:8080/api/employees`
+- Comprehensive error handling and logging
+- All API communication centralized here
+
+**OOP Principles Demonstrated**:
+- ✅ Abstraction (components never call axios directly)
+- ✅ Separation of Concerns (HTTP logic isolated)
+- ✅ Single Responsibility (API communication only)
+
+---
+
+### 4. State Management Hook (FR-004)
+
+- **File**: `src/hooks/useEmployees.ts`
+- **Exposes**:
+  - `employees: Employee[]` — Current employee list
+  - `loading: boolean` — Loading state
+  - `error: string | null` — Error message
+  - `fetchAll(): void` — Refetch all employees
+  - `addEmployee(data): Promise<void>` — Create employee
+  - `editEmployee(id, data): Promise<void>` — Update employee
+  - `removeEmployee(id): Promise<void>` — Delete employee
+
+**Vibe**: "I manage all state and operations."
+- Automatic fetch on component mount
+- Optimistic state updates
+- Comprehensive error handling
+- State isolated from UI components
+
+**OOP Principles Demonstrated**:
+- ✅ Encapsulation (state logic hidden from components)
+- ✅ Single Responsibility (state management only)
+- ✅ Abstraction (components use simple API)
+
+---
+
+### 5. Components
+
+#### EmployeeForm Component (FR-006)
+- **File**: `src/components/EmployeeForm.tsx`
+- **Props**:
+  - `onSubmit(data): Promise<void>` — Form submission handler
+  - `initialData?: Employee` — Pre-fill for edit mode
+  - `onCancel(): void` — Cancel callback
+
+**Features**:
+  - ✅ Controlled inputs for all 5 fields
+  - ✅ Real-time validation feedback
+  - ✅ Error display below each field
+  - ✅ Submit button label changes: "Add Employee" / "Update Employee"
+  - ✅ Loading state during submission
+  - ✅ Form reset after successful submission
+  - ✅ Auto-detect edit vs create mode
+
+**Vibe**: "I handle form input and submission."
+- Pure component logic, no API calls
+- Validation rules:
+  - All fields required
+  - Email must be valid format
+  - Clear error messages on blur
+
+**OOP Principles Demonstrated**:
+- ✅ Encapsulation (form state lives inside)
+- ✅ Single Responsibility (form handling only)
+
+#### EmployeeList Component (FR-005)
+- **File**: `src/components/EmployeeList.tsx`
+- **Props**:
+  - `employees: Employee[]` — List to display
+  - `onEdit(employee): void` — Edit button handler
+  - `onDelete(id): void` — Delete button handler
+  - `loading: boolean` — Loading state
+
+**Features**:
+  - ✅ Table displays all 6 fields
+  - ✅ ID, Edit, Delete buttons in Actions column
+  - ✅ Loading indicator while fetching
+  - ✅ Empty state when no employees
+  - ✅ Disabled buttons during operations
+  - ✅ Responsive table with horizontal scroll on mobile
+
+**Vibe**: "I just render. I don't think."
+- Pure presentational component
+- All logic passed via props
+- No state management
+
+**OOP Principles Demonstrated**:
+- ✅ Single Responsibility (render only)
+- ✅ Composition (receives data as props)
+
+#### App Component (FR-007)
+- **File**: `src/App.tsx`
+- **Responsibilities**:
+  - Consume `useEmployees` hook
+  - Manage edit/add form mode
+  - Manage `selectedEmployee` state
+  - Wire callbacks between hook and components
+  - Coordinate data flow
+
+**Vibe**: "I orchestrate. I wire everything together."
+
+**Architecture**:
+```
+App (Orchestrator)
+├── Manages: selectedEmployee, showForm
+├── EmployeeForm (UI — Form Rendering)
+│   │── onSubmit → handleSubmitForm
+│   │   ├── If edit mode: useEmployees.editEmployee()
+│   │   └── If create mode: useEmployees.addEmployee()
+│   └── onCancel → handleCancelForm
+│
+└── EmployeeList (UI — List Rendering)
+    ├── onEdit → handleEdit (set selectedEmployee, show form)
+    ├── onDelete → handleDelete (confirmation + removeEmployee)
+    └── employees (from useEmployees hook)
+```
+
+**OOP Principles Demonstrated**:
+- ✅ Composition (assembles components)
+- ✅ Separation of Concerns (state orchestration)
+- ✅ Abstraction (hides implementation details)
+
+#### Entry Point (main.tsx)
+- **File**: `src/main.tsx`
+- Mounts React app into DOM
+- Wraps with `React.StrictMode` for development checks
+
+---
+
+### 6. Styling
+
+#### App.css
+- Root CSS variables for theming
+- Responsive grid layout (2-column on desktop, 1-column on mobile)
+- Header with gradient background
+- Footer with fixed positioning
+- Error banner styling
+- Accessible focus states
+
+#### EmployeeForm.css
+- Form group styling with labels
+- Input/select field styling with focus states
+- Validation error display
+- Form action buttons (Submit, Cancel)
+- Responsive adjustments for mobile
+
+#### EmployeeList.css
+- Table styling with hover effects
+- Edit/Delete button styling
+- Loading and empty state styling
+- Responsive table with horizontal scroll on mobile
+- Accessible cell padding and font sizes
+
+**Design System**:
+- Primary color: `#4f46e5` (Indigo)
+- Secondary color: `#10b981` (Emerald)
+- Danger color: `#ef4444` (Red)
+- Consistent spacing and shadows
+- Mobile-first responsive design
+
+---
+
+### 7. Unit Tests
+
+#### Component Tests
+
+**EmployeeForm.test.tsx** (8 tests)
+- ✅ Renders all form fields
+- ✅ Displays correct title for create/edit mode
+- ✅ Validates all required fields
+- ✅ Validates email format
+- ✅ Calls onCancel when Cancel is clicked
+- ✅ Populates form with initial data in edit mode
+- ✅ Handles form submission
+- ✅ Disables buttons during loading
+
+**EmployeeList.test.tsx** (9 tests)
+- ✅ Renders list title
+- ✅ Displays all employees in table
+- ✅ Shows all table headers
+- ✅ Displays loading message when fetching
+- ✅ Displays empty state when no employees
+- ✅ Calls onEdit when Edit button clicked
+- ✅ Calls onDelete when Delete button clicked
+- ✅ Disables buttons when loading
+- ✅ Renders correct employee data
+
+#### Service Tests
+
+**employeeService.test.ts** (6 tests)
+- ✅ Fetches all employees
+- ✅ Fetches employee by ID
+- ✅ Creates new employee
+- ✅ Updates existing employee
+- ✅ Deletes employee
+- ✅ Handles API errors
+
+**Total Frontend Test Coverage**: 23 unit tests
+- Component tests using React Testing Library
+- Service tests using axios mocking
+- All critical paths covered
+- User interactions tested
+
+---
+
+## Architecture Verification
+
+✅ **Frontend Layer Hierarchy** (Golden Rule: No Skipping)
+```
+Component (UI Rendering)
+    ↓ asks
+Hook / State Management
+    ↓ asks
+Service (API Calls)
+    ↓ asks
+Backend API
+```
+
+✅ **Separation of Concerns**
+- **Types**: Contract definition only
+- **Service**: HTTP communication only
+- **Hook**: State management only
+- **Components**: UI rendering only
+- **App**: Orchestration only
+
+✅ **OOP Principles in Frontend**
+- **Encapsulation**: Form state, hook state hidden from components
+- **Abstraction**: Service abstracts HTTP; Hook abstracts state; Components abstract rendering
+- **Polymorphism**: Custom hooks provide flexible state management
+- **Inheritance**: Reusable component patterns
+- **Single Responsibility**: Each file has one reason to change
+
+---
+
+## Frontend Project Structure
+
+```
+StaffForge_UI/
+├── package.json ✅ (Updated with dependencies)
+├── tsconfig.json ✅ (TypeScript config)
+├── tsconfig.app.json ✅ (App-specific config)
+├── tsconfig.spec.json ✅ (Test-specific config)
+├── src/
+│   ├── main.tsx ✅ (Entry point)
+│   ├── App.tsx ✅ (Root component)
+│   ├── App.css ✅ (App styling)
+│   ├── index.css ✅ (Base styles)
+│   ├── types/
+│   │   └── Employee.ts ✅ (Type definitions)
+│   ├── services/
+│   │   ├── employeeService.ts ✅ (API client)
+│   │   └── employeeService.test.ts ✅ (Service tests)
+│   ├── hooks/
+│   │   └── useEmployees.ts ✅ (State management)
+│   ├── components/
+│   │   ├── EmployeeForm.tsx ✅ (Create/Edit form)
+│   │   ├── EmployeeForm.css ✅ (Form styling)
+│   │   ├── EmployeeForm.test.tsx ✅ (Form tests)
+│   │   ├── EmployeeList.tsx ✅ (Employee table)
+│   │   ├── EmployeeList.css ✅ (List styling)
+│   │   └── EmployeeList.test.tsx ✅ (List tests)
+```
+
+---
+
+## How to Run Frontend
+
+### Installation
+```bash
+cd StaffForge_UI
+npm install  # Install dependencies
+```
+
+### Development
+```bash
+npm run dev  # Start Vite dev server on http://localhost:5173
+```
+
+### Testing
+```bash
+npm run test  # Run Vitest with 23 unit tests
+```
+
+### Build
+```bash
+npm run build  # Build for production
+npm run preview  # Preview production build
+```
+
+---
+
+## Integration with Backend
+
+**Backend must be running**:
+```bash
+cd StaffForge
+./gradlew bootRun  # Starts on http://localhost:8080
+```
+
+**Frontend connects to**:
+- Backend URL: `http://localhost:8080/api/employees`
+- CORS enabled in backend controller: `@CrossOrigin(origins = "http://localhost:5173")`
+
+**API Contract** (REST endpoints):
+- `GET /api/employees` — Fetch all
+- `GET /api/employees/{id}` — Fetch by ID
+- `POST /api/employees` — Create
+- `PUT /api/employees/{id}` — Update
+- `DELETE /api/employees/{id}` — Delete
+
+---
+
+## Next Steps
+
+- [ ] E2E testing with Cypress/Playwright
+- [ ] Additional backend validation (email uniqueness check)
+- [ ] Pagination for large employee lists
+- [ ] Search/filter functionality
+- [ ] Sort employees by column
+- [ ] Docker containerization
+- [ ] CI/CD pipeline
+- [ ] Production deployment
+
+---
+
+**Authored**: GitHub Copilot  
+**Date**: 2026-05-22  
+**Status**: ✅ Complete & Tested
