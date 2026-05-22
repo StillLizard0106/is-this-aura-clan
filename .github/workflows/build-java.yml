@@ -15,39 +15,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Detect and Build Project
+      - name: Build Java Files
         run: |
-          if find . -name "build.gradle" | grep -q .; then
-            echo "Gradle project detected"
-
-            for gradle in $(find . -name "build.gradle"); do
-              dir=$(dirname "$gradle")
-              echo "-----------------------------------"
-              echo "Building Gradle project in: $dir"
-              cd "$dir"
-
-              gradle compileJava || echo "⚠️ Build failed in $dir, skipping..."
-
-              cd -
-            done
-
-          elif find . -name "pom.xml" | grep -q .; then
-            echo "Maven project detected"
-
-            for pom in $(find . -name "pom.xml"); do
-              dir=$(dirname "$pom")
-              echo "-----------------------------------"
-              echo "Building Maven project in: $dir"
-              cd "$dir"
-
-              mvn clean compile -q || echo "⚠️ Build failed in $dir, skipping..."
-
-              cd -
-            done
-
-          else
-            echo "Plain Java project detected"
-            mkdir -p bin
-            find . -name "*.java" > sources.txt
-            javac -d bin -cp bin @sources.txt
-          fi
+          find . -name "build.gradle" | while read f; do
+            cd $(dirname $f)
+            gradle build
+            cd $GITHUB_WORKSPACE
+          done
+          find . -name "pom.xml" | while read f; do
+            cd $(dirname $f)
+            mvn package -q
+            cd $GITHUB_WORKSPACE
+          done
