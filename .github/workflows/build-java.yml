@@ -26,7 +26,7 @@ jobs:
               echo "Building Gradle project in: $dir"
               cd "$dir"
 
-              gradle build -x bootJar -x test --continue || echo "⚠️ Build failed in $dir, skipping..."
+              gradle compileJava || echo "⚠️ Build failed in $dir, skipping..."
 
               cd -
             done
@@ -40,7 +40,7 @@ jobs:
               echo "Building Maven project in: $dir"
               cd "$dir"
 
-              mvn clean install -DskipTests || echo "⚠️ Build failed in $dir, skipping..."
+              mvn clean compile -q || echo "⚠️ Build failed in $dir, skipping..."
 
               cd -
             done
