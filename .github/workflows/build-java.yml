@@ -1,5 +1,4 @@
 name: Build Java Files
-
 on:
   push:
     branches: [ main ]
@@ -11,23 +10,44 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
-
-      - name: Build Java Files
+      - name: Detect and Build Project
         run: |
-          find springboot-lab -name "build.gradle" | while read f; do
-            cd $(dirname $f)
-            gradle build
-            cd $GITHUB_WORKSPACE
-          done
+          if find . -name "build.gradle" | grep -q .; then
+            echo "Gradle project detected"
 
-          find springboot-lab -name "pom.xml" | while read f; do
-            cd $(dirname $f)
-            mvn package -q
-            cd $GITHUB_WORKSPACE
-          done
+            for gradle in $(find . -name "build.gradle"); do
+              dir=$(dirname "$gradle")
+              echo "-----------------------------------"
+              echo "Building Gradle project in: $dir"
+              cd "$dir"
+
+              gradle build
+
+              cd -
+            done
+
+          elif find . -name "pom.xml" | grep -q .; then
+            echo "Maven project detected"
+
+            for pom in $(find . -name "pom.xml"); do
+              dir=$(dirname "$pom")
+              echo "-----------------------------------"
+              echo "Building Maven project in: $dir"
+              cd "$dir"
+
+              mvn clean install -DskipTests
+
+              cd -
+            done
+
+          else
+            echo "Plain Java project detected"
+            mkdir -p bin
+            find . -name "*.java" > sources.txt
+            javac -d bin -cp bin @sources.txt
+          fi
