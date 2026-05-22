@@ -15,7 +15,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-- name: Build Java Files
+      - name: Build Java Files
         run: |
           find . -name "build.gradle" | while read f; do
             cd $(dirname $f)
