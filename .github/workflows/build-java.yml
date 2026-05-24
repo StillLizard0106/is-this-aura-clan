@@ -22,14 +22,14 @@ jobs:
             cd "$dir"
             if [ -f "./gradlew" ]; then
               chmod +x ./gradlew
-              ./gradlew build || true
+              ./gradlew build
             else
-              gradle build || true
+              gradle build
             fi
             cd $GITHUB_WORKSPACE
           done
           find . -name "pom.xml" | while read f; do
-            cd $(dirname $f)
-            mvn package -q || true
+            cd $(dirname "$f")
+            mvn package -q
             cd $GITHUB_WORKSPACE
           done
