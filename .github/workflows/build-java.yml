@@ -18,8 +18,14 @@ jobs:
       - name: Build Java Files
         run: |
           find . -name "build.gradle" | while read f; do
-            cd $(dirname $f)
-            gradle build || true
+            dir=$(dirname "$f")
+            cd "$dir"
+            if [ -f "./gradlew" ]; then
+              chmod +x ./gradlew
+              ./gradlew build || true
+            else
+              gradle build || true
+            fi
             cd $GITHUB_WORKSPACE
           done
           find . -name "pom.xml" | while read f; do
