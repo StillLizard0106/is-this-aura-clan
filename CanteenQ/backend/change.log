@@ -1,0 +1,100 @@
+# Change Log
+
+## Unreleased
+
+### Added
+- Backend health check endpoint at `GET /api/health`.
+- Web slice test that verifies the health endpoint returns `{"status":"UP"}`.
+- JPA foundation for `users` with a `UserAccount` entity, role enum, and repository.
+- Postgres profile configuration in `application-postgres.properties`.
+- Unit tests for `UserAccount` field initialization and profile update behavior.
+- Firebase auth verification skeleton with bearer-token parsing, a verification contract, and a default unconfigured verifier.
+- Unit tests covering Firebase bearer-token extraction and auth service behavior.
+- HTTP auth verification endpoint at `GET /api/auth/verify` with consistent error responses.
+- Controller tests for successful auth verification, missing bearer tokens, and unconfigured Firebase Admin handling.
+- Protected endpoint at `GET /api/protected/profile` that returns authenticated user details.
+- Service and controller tests for protected resource access and auth failure handling.
+- Firebase Admin SDK integration using the official Java Admin SDK with conditional initialization.
+- Firebase Admin token verifier and configuration tests.
+- User sync service that creates or updates a `users` row after Firebase auth succeeds.
+- Auth controller test coverage for sync invocation and `UserAccountSyncService` unit tests.
+- MVC interceptor wired to guard `/api/protected/**` before controller execution.
+- Protected route refactored to consume the verified Firebase principal from request attributes.
+- Role-based authorization service that resolves `users` records and enforces `STAFF` access.
+- Staff-only dashboard endpoint with controller and authorization tests.
+- Read-only catalog module for `stalls` and `menu_items` with JPA entities, repositories, and public browse endpoints.
+- Catalog service and controller tests for list and not-found behavior.
+- Staff CRUD for stalls with create, update, delete, and staff-only listing endpoints.
+- Validation, duplicate-stall, and staff CRUD controller/service tests.
+- Staff CRUD for menu items under each stall with create, update, delete, and listing endpoints.
+- Menu item duplicate-name, not-found, and staff CRUD controller/service tests.
+- Opt-in demo data bootstrap runner for staff account, a sample stall, and sample menu items.
+- Bootstrap runner tests for seeded and pre-existing data paths.
+- Order placement module with `POST /api/orders`, order entities, and student validation rules.
+- Order service and controller tests for placement, timing, and conflict checks.
+- Student order history endpoint at `GET /api/orders/my` with active-order and history separation.
+- Order history service and controller tests with persisted order mapping.
+- Staff queue management endpoint at `GET /api/staff/orders` for active stall orders.
+- Staff queue service and controller tests with queue ordering and stall validation.
+- Staff order status update endpoint at `PATCH /api/staff/orders/{orderId}` with controlled state transitions.
+- Order status transition and order-not-found tests for staff order updates.
+- Student cancellation endpoint at `DELETE /api/orders/{orderId}` with a 15-minute cutoff before pickup.
+- Staff unclaimed-order endpoint at `PATCH /api/staff/orders/{orderId}/unclaimed` with pickup grace-period checks.
+- Cancellation and unclaimed-order tests covering timing rules and error responses.
+- Student order detail endpoint at `GET /api/orders/{orderId}` for a single owned order.
+- Order detail service and controller tests for ownership and not-found behavior.
+- Staff order detail endpoint at `GET /api/staff/orders/{orderId}` with the existing staff response shape.
+- Staff order detail service and controller tests for staff access and not-found behavior.
+- Student order update notifications over SSE at `GET /api/orders/notifications`.
+- In-memory notification hub plus tests for publish and subscribe behavior.
+- Scheduled auto-marking of overdue ready orders as `UNCLAIMED`.
+- Scheduler tests covering due-order processing and the empty-queue path.
+- Staff queue filters for date and status on `GET /api/staff/orders`.
+- Queue service and controller tests for filtered staff order searches.
+- Staff reporting summary endpoint at `GET /api/staff/reporting/summary`.
+- Reporting summary service and controller tests for staff counts and role checks.
+- Date-range filters for `GET /api/staff/reporting/summary` via `startDate` and `endDate`.
+- Reporting tests for the filtered summary path.
+- Per-stall order and revenue breakdowns in the staff reporting summary.
+- Reporting tests for stall-level aggregation and revenue totals.
+- Order audit trail feature with `OrderAuditTrail` JPA entity and `order_audit_trail` table.
+- Audit trail recording for all order status transitions (staff-initiated and system-initiated).
+- Staff endpoint at `GET /api/staff/orders/{orderId}/audit` to view complete order history.
+- Integration of audit logging in `StaffOrderStatusService` for manual status updates.
+- Integration of audit logging in `OrderCancellationService` for student cancellations.
+- Integration of audit logging in `OrderUnclaimedScheduler` for auto-transitions (system-initiated with `changedBy = null`).
+- Comprehensive unit tests for `OrderAuditTrail` entity, `OrderAuditTrailService`, and response mapper.
+- Unit tests for `StaffOrderAuditService` and `StaffOrderAuditController`.
+
+### Summary
+- Provides a minimal backend readiness endpoint for initial integration and verification.
+- Establishes the first persistent domain model without changing the default runtime database setup.
+- Adds a stable backend seam for Firebase token verification without requiring live Firebase credentials yet.
+- Exposes the auth seam over HTTP so frontend/backend integration can start without weakening the error model.
+- Demonstrates an actual protected route while keeping auth handling explicit and testable.
+- Enables real Firebase Admin token verification when configured, while keeping the app safe to run without credentials.
+- Keeps the user record in sync with Firebase identity data without changing the existing auth response format.
+- Moves auth enforcement into the MVC layer so protected routes are guarded consistently.
+- Adds a minimal role-based access path for staff accounts without mixing authorization into token verification.
+- Starts the actual canteen domain model in a stable, read-only form for frontend menu browsing.
+- Adds the first staff-managed write path for the canteen domain without changing menu-item behavior yet.
+- Extends staff management to the menu layer so stalls can now own editable item catalogs.
+- Gives the app a predictable demo dataset without enabling auto-seeding in normal runs.
+- Adds the first checkout flow so students can submit orders against a stall catalog.
+- Gives students visibility into current active orders and past order history.
+- Gives staff a live queue view for incoming and in-progress orders by stall.
+- Lets staff move an order through the kitchen lifecycle without bypassing the existing auth model.
+- Gives students a controlled way to cancel pending orders before the pickup cutoff.
+- Lets staff mark late, unclaimed ready orders so the queue reflects the real pickup state.
+- Lets students open one owned order directly instead of only using the list view.
+- Lets staff open a single order directly from the queue or any other staff workflow.
+- Lets students receive status-change updates without polling the order history endpoint.
+- Automatically keeps overdue ready orders moving into the unclaimed state without manual staff action.
+- Lets staff narrow the queue to a specific date or order status without changing the existing endpoint shape.
+- Gives staff a compact operational snapshot without adding a separate reporting table or job.
+- Lets staff narrow the operational summary to a specific date span without changing the payload shape.
+- Lets staff see which stalls are driving orders and revenue inside the same summary endpoint.
+
+### Updated
+- Moved the Spring Boot backend project files into `backend/`.
+- Moved the project context files into `CanteenQ/Context/` and added a placeholder file to keep the folder explicit.
