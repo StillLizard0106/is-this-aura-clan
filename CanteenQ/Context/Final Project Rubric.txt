@@ -1,0 +1,72 @@
+Grading Breakdown
+Category: Percentage
+Software Design & Applied OOP Concepts: 40%
+⁠
+Implementation, Completion & Usability: 40%
+⁠
+Final Presentation & Showcase: 20%
+⁠
+Software Design & Applied OOP Concepts (40%)
+OOP Pillars
+Proper use of Encapsulation, Abstraction, Inheritance, and Polymorphism
+⁠
+GRASP & SOLID Principles
+Clear and appropriate application of GRASP and SOLID principles
+⁠
+Architecture & Code Organization
+Proper layering, package structure, separation of concerns, maintainability
+⁠
+Design Quality & Best Practices
+Clean code, DRY, KISS, YAGNI, naming conventions, readability
+⁠
+⁠
+Implementation, Completion & Usability (40%)
+⁠
+Feature Completion
+Required functionalities are complete and operational
+⁠
+Frontend ↔ Backend ↔ Database Integration
+Proper API communication, CRUD operations, and persistent storage
+⁠
+System Stability & Error Handling
+Handles exceptions, validations, and edge cases properly
+⁠
+Usability & User Experience
+Clear navigation, understandable UI, practical usability
+⁠
+Testing & Verification
+Proper testing, debugging, and evidence of verification
+⁠
+⁠
+Final Presentation & Showcase (20%)
+Project Demonstration
+Clear demonstration of working features and workflows
+⁠
+Explanation of OOP Concepts
+Ability to explain applied OOP concepts, SOLID, GRASP, and design decisions
+⁠
+Technical Understanding
+Ability to answer technical questions confidently and correctly
+⁠
+Presentation Quality & Team Preparedness
+Organization, professionalism, teamwork, and clarity of communication
+⁠
+⁠
+Bonus Points (Optional)
+AI Integration
+Concurrency / Async Features
+Advanced Security Features
+Microservices / Distributed Design
+Exceptional UI/UX
+⁠
+⁠
+Automatic Deductions
+Does Not Run
+Plagiarized Code
+Hardcoded Credentials
+Missing README  / Changelog / Documentation
+No Git History / Collaboration Evidence
+No Error Handling
+⁠
+Final Evaluation Philosophy
+A strong OOP project is not judged only by completed features, but by how well responsibilities, architecture, maintainability, and communication are designed and demonstrated.

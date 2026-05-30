@@ -1,0 +1,8 @@
+Presentation format, max 20mins:
+Team Intro (Team members)
+Problem Statement (What problem did you try to solve?)
+Your App (The solution)
+OOP Concepts applied in the solution. Where and Why.
+OOP Best Practices/Design Patterns you used. Where and How.
+Demo
+Q&A
