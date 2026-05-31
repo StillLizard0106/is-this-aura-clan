@@ -1,6 +1,8 @@
 package com.is_this_aura_clan.CanteenQ.account;
 
 import java.util.Optional;
+import java.util.Set;
+import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +12,11 @@ import com.is_this_aura_clan.CanteenQ.auth.InvalidFirebaseAuthorizationException
 
 @Service
 public class UserAccountSyncService {
+
+	private static final Set<String> DEMO_STAFF_EMAILS = Set.of(
+		"staff@canteen.local",
+		"staff@canteenq.local"
+	);
 
 	private final UserAccountRepository userAccountRepository;
 
@@ -37,11 +44,15 @@ public class UserAccountSyncService {
 	private UserAccount updateExistingUser(UserAccount userAccount, String firebaseUid, String email) {
 		userAccount.updateProfile(deriveDisplayName(email), userAccount.getStudentId(), email);
 		userAccount.linkFirebaseAccount(firebaseUid);
+		if (isDemoStaffEmail(email)) {
+			userAccount.changeRole(UserRole.STAFF);
+		}
 		return userAccount;
 	}
 
 	private UserAccount createNewUser(String firebaseUid, String email) {
-		return new UserAccount(deriveDisplayName(email), null, email, firebaseUid, UserRole.STUDENT);
+		UserRole role = isDemoStaffEmail(email) ? UserRole.STAFF : UserRole.STUDENT;
+		return new UserAccount(deriveDisplayName(email), null, email, firebaseUid, role);
 	}
 
 	private String requireText(String value, String message) {
@@ -73,5 +84,9 @@ public class UserAccountSyncService {
 			}
 		}
 		return displayName.isEmpty() ? "Unknown User" : displayName.toString();
+	}
+
+	private boolean isDemoStaffEmail(String email) {
+		return DEMO_STAFF_EMAILS.contains(email.trim().toLowerCase(Locale.ROOT));
 	}
 }

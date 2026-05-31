@@ -1,10 +1,12 @@
 package com.is_this_aura_clan.CanteenQ.auth;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(prefix = "firebase.admin", name = "enabled", havingValue = "false", matchIfMissing = true)
+@Profile("!dev")
 class UnconfiguredFirebaseTokenVerifier implements FirebaseTokenVerifier {
 
 	@Override

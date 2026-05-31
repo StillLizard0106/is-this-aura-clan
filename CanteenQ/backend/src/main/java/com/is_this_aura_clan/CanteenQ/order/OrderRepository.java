@@ -20,6 +20,15 @@ public interface OrderRepository extends JpaRepository<CanteenOrder, UUID> {
 
 	long countByStatusAndUpdatedAtBetween(OrderStatus status, LocalDateTime start, LocalDateTime end);
 
+	long countByStallIdAndStatusIn(UUID stallId, java.util.Collection<OrderStatus> statuses);
+
+	long countByStallIdAndPickupSlotBetweenAndStatusIn(
+		UUID stallId,
+		LocalDateTime start,
+		LocalDateTime end,
+		java.util.Collection<OrderStatus> statuses
+	);
+
 	List<CanteenOrder> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
 	Optional<CanteenOrder> findTopByStallIdAndPickupSlotBetweenOrderByQueueNumberDesc(UUID stallId, LocalDateTime start, LocalDateTime end);

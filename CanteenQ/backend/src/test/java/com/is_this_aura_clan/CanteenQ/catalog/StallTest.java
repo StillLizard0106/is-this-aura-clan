@@ -15,6 +15,7 @@ class StallTest {
 		assertEquals("Rice Bowl", stall.getStallName());
 		assertEquals("A. Vendor", stall.getVendorName());
 		assertEquals("8:00 AM - 2:00 PM", stall.getOperatingHours());
+		assertEquals(100, stall.getQueueLimit());
 	}
 
 	@Test

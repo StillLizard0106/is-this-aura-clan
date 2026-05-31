@@ -7,6 +7,10 @@ public class FirebaseAdminProperties {
 
 	private boolean enabled;
 	private String credentialsPath;
+	/**
+	 * Optional raw JSON credentials or base64-encoded JSON. If provided, this takes priority over path.
+	 */
+	private String credentialsJson;
 	private String projectId;
 
 	public boolean isEnabled() {
@@ -23,6 +27,14 @@ public class FirebaseAdminProperties {
 
 	public void setCredentialsPath(String credentialsPath) {
 		this.credentialsPath = credentialsPath;
+	}
+
+	public String getCredentialsJson() {
+		return credentialsJson;
+	}
+
+	public void setCredentialsJson(String credentialsJson) {
+		this.credentialsJson = credentialsJson;
 	}
 
 	public String getProjectId() {

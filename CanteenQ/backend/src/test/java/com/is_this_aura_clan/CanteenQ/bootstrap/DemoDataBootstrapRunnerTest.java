@@ -17,6 +17,7 @@ import com.is_this_aura_clan.CanteenQ.catalog.MenuItem;
 import com.is_this_aura_clan.CanteenQ.catalog.MenuItemRepository;
 import com.is_this_aura_clan.CanteenQ.catalog.Stall;
 import com.is_this_aura_clan.CanteenQ.catalog.StallRepository;
+import com.is_this_aura_clan.CanteenQ.catalog.StaffStallRepository;
 
 class DemoDataBootstrapRunnerTest {
 
@@ -25,8 +26,9 @@ class DemoDataBootstrapRunnerTest {
 		UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
 		StallRepository stallRepository = mock(StallRepository.class);
 		MenuItemRepository menuItemRepository = mock(MenuItemRepository.class);
+		StaffStallRepository staffStallRepository = mock(StaffStallRepository.class);
 
-		when(userAccountRepository.findByEmail("staff@canteenq.local")).thenReturn(Optional.empty());
+		when(userAccountRepository.findByEmail("staff@canteen.local")).thenReturn(Optional.empty());
 		when(userAccountRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 		when(stallRepository.findByStallNameIgnoreCase("Rice Bowl")).thenReturn(Optional.empty());
 		when(stallRepository.save(any(Stall.class))).thenAnswer(invocation -> {
@@ -36,8 +38,10 @@ class DemoDataBootstrapRunnerTest {
 		});
 		when(menuItemRepository.findByStall_IdAndItemNameIgnoreCase(any(), any())).thenReturn(Optional.empty());
 		when(menuItemRepository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		when(staffStallRepository.existsByStaffAndStall(any(), any())).thenReturn(false);
+		when(staffStallRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-		DemoDataBootstrapRunner runner = new DemoDataBootstrapRunner(userAccountRepository, stallRepository, menuItemRepository);
+		DemoDataBootstrapRunner runner = new DemoDataBootstrapRunner(userAccountRepository, stallRepository, menuItemRepository, staffStallRepository);
 		runner.run();
 
 		verify(userAccountRepository).save(any());
@@ -50,16 +54,18 @@ class DemoDataBootstrapRunnerTest {
 		UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
 		StallRepository stallRepository = mock(StallRepository.class);
 		MenuItemRepository menuItemRepository = mock(MenuItemRepository.class);
+		StaffStallRepository staffStallRepository = mock(StaffStallRepository.class);
 
 		Stall existingStall = new Stall("Rice Bowl", "Demo Vendor", "8:00 AM - 2:00 PM");
 		assignStallId(existingStall, UUID.fromString("11111111-1111-1111-1111-111111111111"));
 
-		when(userAccountRepository.findByEmail("staff@canteenq.local")).thenReturn(Optional.of(new com.is_this_aura_clan.CanteenQ.account.UserAccount("Demo Staff", null, "staff@canteenq.local", "demo-staff-uid", com.is_this_aura_clan.CanteenQ.account.UserRole.STAFF)));
+		when(userAccountRepository.findByEmail("staff@canteen.local")).thenReturn(Optional.of(new com.is_this_aura_clan.CanteenQ.account.UserAccount("Demo Staff", null, "staff@canteen.local", "demo-staff-uid", com.is_this_aura_clan.CanteenQ.account.UserRole.STAFF)));
 		when(stallRepository.findByStallNameIgnoreCase("Rice Bowl")).thenReturn(Optional.of(existingStall));
 		when(menuItemRepository.findByStall_IdAndItemNameIgnoreCase(existingStall.getId(), "Chicken Rice")).thenReturn(Optional.of(new MenuItem(existingStall, "Chicken Rice", "Rice with chicken", java.math.BigDecimal.valueOf(45), "Meals", true)));
 		when(menuItemRepository.findByStall_IdAndItemNameIgnoreCase(existingStall.getId(), "BBQ Rice")).thenReturn(Optional.of(new MenuItem(existingStall, "BBQ Rice", "Rice with barbecue", java.math.BigDecimal.valueOf(50), "Meals", true)));
+		when(staffStallRepository.existsByStaffAndStall(any(), any())).thenReturn(true);
 
-		DemoDataBootstrapRunner runner = new DemoDataBootstrapRunner(userAccountRepository, stallRepository, menuItemRepository);
+		DemoDataBootstrapRunner runner = new DemoDataBootstrapRunner(userAccountRepository, stallRepository, menuItemRepository, staffStallRepository);
 		runner.run();
 
 		verify(userAccountRepository, never()).save(any());

@@ -1,0 +1,64 @@
+import client from './axios-client';
+
+// Auth APIs
+export const verifyToken = () => client.get('/auth/verify');
+export const getProfile = () => client.get('/protected/profile');
+
+// Catalog APIs
+export const getStalls = () => client.get('/stalls');
+export const getMenuItems = (stallId) => client.get(`/stalls/${stallId}/menu-items`);
+
+// Order APIs (Student)
+export const placeOrder = (orderData) => client.post('/orders', orderData);
+export const getMyOrders = () => client.get('/orders/my');
+export const getOrderDetail = (orderId) => client.get(`/orders/${orderId}`);
+export const cancelOrder = (orderId) => client.delete(`/orders/${orderId}`);
+export const getOrderHistory = () => client.get('/orders/my');
+
+// Order Notifications (SSE)
+export const subscribeToOrderUpdates = (callback, errorCallback) => {
+  const token = localStorage.getItem('firebaseToken');
+  const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+  if (!token) {
+    return { close: () => {} };
+  }
+
+  const eventSource = new EventSource(
+    `${baseURL}/orders/notifications?access_token=${encodeURIComponent(token)}`
+  );
+
+  eventSource.onmessage = (event) => {
+    try {
+      const notification = JSON.parse(event.data);
+      callback(notification);
+    } catch (error) {
+      console.error('Error parsing notification:', error);
+    }
+  };
+
+  eventSource.onerror = (error) => {
+    console.error('SSE connection error:', error);
+    if (errorCallback) errorCallback(error);
+    eventSource.close();
+  };
+
+  return eventSource;
+};
+
+// Staff APIs
+export const getStaffDashboard = () => client.get('/staff/dashboard');
+export const getMyStalls = () => client.get('/staff/assignments');
+export const getStaffOrders = (params = {}) => 
+  client.get('/staff/orders', { params });
+export const getStaffOrderDetail = (orderId) => client.get(`/staff/orders/${orderId}`);
+export const updateOrderStatus = (orderId, status) =>
+  client.patch(`/staff/orders/${orderId}`, { status });
+export const getOrderAuditTrail = (orderId) => client.get(`/staff/orders/${orderId}/audit`);
+export const markOrderUnclaimed = (orderId) => client.patch(`/staff/orders/${orderId}/unclaimed`);
+
+// Reporting APIs
+export const getReportingSummary = (params = {}) =>
+  client.get('/staff/reporting/summary', { params });
+
+// Health API
+export const checkHealth = () => client.get('/health');
