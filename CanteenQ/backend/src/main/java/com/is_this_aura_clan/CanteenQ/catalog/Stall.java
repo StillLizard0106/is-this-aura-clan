@@ -17,6 +17,9 @@ import jakarta.persistence.Table;
 @Table(name = "stalls")
 public class Stall {
 
+	private static final int DEFAULT_QUEUE_LIMIT = 100;
+	private static final int MAX_QUEUE_LIMIT = 100;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;
@@ -30,6 +33,9 @@ public class Stall {
 	@Column(name = "operating_hours", nullable = false)
 	private String operatingHours;
 
+	@Column(name = "queue_limit")
+	private Integer queueLimit;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
@@ -40,9 +46,14 @@ public class Stall {
 	}
 
 	public Stall(String stallName, String vendorName, String operatingHours) {
+		this(stallName, vendorName, operatingHours, DEFAULT_QUEUE_LIMIT);
+	}
+
+	public Stall(String stallName, String vendorName, String operatingHours, Integer queueLimit) {
 		this.stallName = Objects.requireNonNull(stallName, "stallName must not be null");
 		this.vendorName = Objects.requireNonNull(vendorName, "vendorName must not be null");
 		this.operatingHours = Objects.requireNonNull(operatingHours, "operatingHours must not be null");
+		this.queueLimit = normalizeQueueLimit(queueLimit);
 	}
 
 	@PrePersist
@@ -51,6 +62,7 @@ public class Stall {
 		if (createdAt == null) {
 			createdAt = now;
 		}
+		queueLimit = normalizeQueueLimit(queueLimit);
 		updatedAt = now;
 	}
 
@@ -75,6 +87,10 @@ public class Stall {
 		return operatingHours;
 	}
 
+	public int getQueueLimit() {
+		return normalizeQueueLimit(queueLimit);
+	}
+
 	public LocalDateTime getCreatedAt() {
 		return createdAt;
 	}
@@ -87,5 +103,12 @@ public class Stall {
 		this.stallName = Objects.requireNonNull(stallName, "stallName must not be null");
 		this.vendorName = Objects.requireNonNull(vendorName, "vendorName must not be null");
 		this.operatingHours = Objects.requireNonNull(operatingHours, "operatingHours must not be null");
+	}
+
+	private int normalizeQueueLimit(Integer value) {
+		if (value == null || value <= 0) {
+			return DEFAULT_QUEUE_LIMIT;
+		}
+		return Math.min(value, MAX_QUEUE_LIMIT);
 	}
 }

@@ -9,16 +9,22 @@ import org.springframework.transaction.annotation.Transactional;
 import com.is_this_aura_clan.CanteenQ.account.UserAuthorizationService;
 import com.is_this_aura_clan.CanteenQ.account.UserRole;
 import com.is_this_aura_clan.CanteenQ.auth.FirebaseAuthenticationPrincipal;
+import com.is_this_aura_clan.CanteenQ.order.OrderRepository;
+import com.is_this_aura_clan.CanteenQ.order.OrderStatus;
 
 @Service
 public class StallManagementService {
 
+	private static final List<OrderStatus> ACTIVE_STATUSES = List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY);
+
 	private final StallRepository stallRepository;
 	private final UserAuthorizationService userAuthorizationService;
+	private final OrderRepository orderRepository;
 
-	public StallManagementService(StallRepository stallRepository, UserAuthorizationService userAuthorizationService) {
+	public StallManagementService(StallRepository stallRepository, UserAuthorizationService userAuthorizationService, OrderRepository orderRepository) {
 		this.stallRepository = stallRepository;
 		this.userAuthorizationService = userAuthorizationService;
+		this.orderRepository = orderRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -70,6 +76,15 @@ public class StallManagementService {
 	}
 
 	private StallResponse toResponse(Stall stall) {
-		return new StallResponse(stall.getId(), stall.getStallName(), stall.getVendorName(), stall.getOperatingHours());
+		int queueLimit = stall.getQueueLimit();
+		int queueSlotsLeft = Math.max(0, queueLimit - Math.toIntExact(orderRepository.countByStallIdAndStatusIn(stall.getId(), ACTIVE_STATUSES)));
+		return new StallResponse(
+			stall.getId(),
+			stall.getStallName(),
+			stall.getVendorName(),
+			stall.getOperatingHours(),
+			queueLimit,
+			queueSlotsLeft
+		);
 	}
 }

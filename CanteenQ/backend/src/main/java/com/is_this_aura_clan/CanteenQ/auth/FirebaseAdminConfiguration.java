@@ -1,9 +1,12 @@
 package com.is_this_aura_clan.CanteenQ.auth;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.List;
 
 import com.google.auth.oauth2.GoogleCredentials;
@@ -45,27 +48,53 @@ public class FirebaseAdminConfiguration {
 	}
 
 	private GoogleCredentials loadCredentials(FirebaseAdminProperties properties) {
+		// Priority: explicit credentialsPath -> credentialsJson (raw or base64) -> GOOGLE_APPLICATION_CREDENTIALS -> Application Default Credentials
 		String credentialsPath = properties.getCredentialsPath();
-		if (credentialsPath == null || credentialsPath.isBlank()) {
-			throw new FirebaseAuthNotConfiguredException(
-				"Firebase Admin is enabled but firebase.admin.credentials-path is missing."
-			);
-		}
+		String credentialsJson = properties.getCredentialsJson();
 
-		Path path = Path.of(credentialsPath.trim());
-		if (!Files.exists(path)) {
-			throw new FirebaseAuthNotConfiguredException(
-				"Firebase Admin credentials file was not found at " + path.toAbsolutePath()
-			);
-		}
+		try {
+			if (credentialsPath != null && !credentialsPath.isBlank()) {
+				Path path = Path.of(credentialsPath.trim());
+				if (!Files.exists(path)) {
+					throw new FirebaseAuthNotConfiguredException(
+						"Firebase Admin credentials file was not found at " + path.toAbsolutePath()
+					);
+				}
+				try (InputStream inputStream = Files.newInputStream(path)) {
+					return GoogleCredentials.fromStream(inputStream);
+				}
+			}
 
-		try (InputStream inputStream = Files.newInputStream(path)) {
-			return GoogleCredentials.fromStream(inputStream);
+			if (credentialsJson != null && !credentialsJson.isBlank()) {
+				String trimmed = credentialsJson.trim();
+				InputStream is;
+				if (trimmed.startsWith("{")) {
+					is = new ByteArrayInputStream(trimmed.getBytes(StandardCharsets.UTF_8));
+				} else {
+					byte[] decoded = Base64.getDecoder().decode(trimmed);
+					is = new ByteArrayInputStream(decoded);
+				}
+				try (InputStream inputStream = is) {
+					return GoogleCredentials.fromStream(inputStream);
+				}
+			}
+
+			String envPath = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
+			if (envPath != null && !envPath.isBlank()) {
+				Path path = Path.of(envPath.trim());
+				if (Files.exists(path)) {
+					try (InputStream inputStream = Files.newInputStream(path)) {
+						return GoogleCredentials.fromStream(inputStream);
+					}
+				}
+			}
+
+			// Fall back to application default credentials (e.g., when running on GCP)
+			return GoogleCredentials.getApplicationDefault();
 		} catch (IOException exception) {
-			throw new IllegalStateException(
-				"Failed to load Firebase Admin credentials from " + path.toAbsolutePath(),
-				exception
-			);
+			throw new IllegalStateException("Failed to load Firebase Admin credentials", exception);
+		} catch (IllegalArgumentException iae) {
+			throw new FirebaseAuthNotConfiguredException("Failed to decode provided Firebase Admin credentials: " + iae.getMessage());
 		}
 	}
 

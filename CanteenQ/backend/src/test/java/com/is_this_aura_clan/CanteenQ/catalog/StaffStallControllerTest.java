@@ -35,7 +35,7 @@ class StaffStallControllerTest {
 
 		StallManagementService stallManagementService = mock(StallManagementService.class);
 		when(stallManagementService.listStalls(new FirebaseAuthenticationPrincipal("uid-staff", "staff@school.edu"))).thenReturn(
-			List.of(new StallResponse(UUID.fromString("11111111-1111-1111-1111-111111111111"), "Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM"))
+			List.of(new StallResponse(UUID.fromString("11111111-1111-1111-1111-111111111111"), "Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM", 100, 100))
 		);
 
 		MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StaffStallController(stallManagementService))
@@ -61,7 +61,7 @@ class StaffStallControllerTest {
 		when(stallManagementService.createStall(
 			new FirebaseAuthenticationPrincipal("uid-staff", "staff@school.edu"),
 			new StallRequest("Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM")
-		)).thenReturn(new StallResponse(UUID.fromString("22222222-2222-2222-2222-222222222222"), "Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM"));
+		)).thenReturn(new StallResponse(UUID.fromString("22222222-2222-2222-2222-222222222222"), "Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM", 100, 100));
 
 		MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StaffStallController(stallManagementService))
 			.addInterceptors(new FirebaseAuthInterceptor(authService))
@@ -89,7 +89,7 @@ class StaffStallControllerTest {
 			new FirebaseAuthenticationPrincipal("uid-staff", "staff@school.edu"),
 			stallId,
 			new StallRequest("Snack Corner", "B. Vendor", "9:00 AM - 3:00 PM")
-		)).thenReturn(new StallResponse(stallId, "Snack Corner", "B. Vendor", "9:00 AM - 3:00 PM"));
+		)).thenReturn(new StallResponse(stallId, "Snack Corner", "B. Vendor", "9:00 AM - 3:00 PM", 100, 100));
 
 		MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StaffStallController(stallManagementService))
 			.addInterceptors(new FirebaseAuthInterceptor(authService))

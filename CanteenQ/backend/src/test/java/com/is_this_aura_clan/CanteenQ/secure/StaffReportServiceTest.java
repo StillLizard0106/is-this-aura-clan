@@ -81,6 +81,7 @@ class StaffReportServiceTest {
 
 		assertEquals(2L, response.totalStalls());
 		assertEquals(3L, response.totalOrders());
+		assertEquals(new BigDecimal("165.00"), response.totalRevenue());
 		assertEquals(3L, response.ordersToday());
 		assertEquals(9L, response.activeOrders());
 		assertEquals(2L, response.pendingOrders());
@@ -127,6 +128,7 @@ class StaffReportServiceTest {
 		);
 
 		assertEquals(0L, response.totalOrders());
+		assertEquals(BigDecimal.ZERO, response.totalRevenue());
 		assertEquals(0L, response.ordersToday());
 		assertEquals(3L, response.activeOrders());
 		assertEquals(0, response.stallBreakdowns().size());

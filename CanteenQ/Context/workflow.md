@@ -132,6 +132,14 @@ To prevent abuse:
 - Each student can only have **one active order at a time** per stall
 - Orders must be placed at least **15 minutes before** the selected pickup slot
 
+#### ⚙️ Queue and Pickup Rules
+- Pickup slots must be at least **15 minutes** ahead
+- Pickup slots must be within **1 week** from the current time
+- Pickup slots must be between **7:00 AM and 6:00 PM**
+- Each stall has a maximum active queue of **100 orders**
+- Students can see queue usage and remaining slots before checkout
+- Staff can reject pending orders before preparation
+
 ---
 
 ### 4. Dashboards
@@ -219,6 +227,7 @@ To prevent abuse:
 | stall_name | VARCHAR | Name of the food stall |
 | vendor_name | VARCHAR | Name of the vendor |
 | operating_hours | VARCHAR | Operating hours |
+| queue_limit | INT | Maximum active queue size |
 
 ### `menu_items`
 | Column | Type | Description |

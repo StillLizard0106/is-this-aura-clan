@@ -38,6 +38,7 @@ class StaffReportControllerTest {
 			new StaffReportResponse(
 				3L,
 				20L,
+				new BigDecimal("165.00"),
 				8L,
 				9L,
 				2L,
@@ -98,7 +99,7 @@ class StaffReportControllerTest {
 		LocalDate startDate = LocalDate.of(2026, 5, 28);
 		LocalDate endDate = LocalDate.of(2026, 5, 29);
 		when(service.getSummary(new FirebaseAuthenticationPrincipal("uid-staff", "staff@school.edu"), startDate, endDate)).thenReturn(
-			new StaffReportResponse(3L, 4L, 4L, 4L, 1L, 1L, 1L, 2L, 0L, 1L, List.of())
+			new StaffReportResponse(3L, 4L, new BigDecimal("120.00"), 4L, 4L, 1L, 1L, 1L, 2L, 0L, 1L, List.of())
 		);
 
 		MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StaffReportController(service))

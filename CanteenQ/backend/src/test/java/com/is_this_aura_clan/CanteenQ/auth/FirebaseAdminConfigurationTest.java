@@ -8,14 +8,20 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 class FirebaseAdminConfigurationTest {
 
 	@Test
-	void failsFastWhenFirebaseAdminIsEnabledWithoutCredentialsPath() {
+	void failsFastWhenFirebaseAdminIsEnabledWithoutValidCredentials() {
 		new ApplicationContextRunner()
 			.withUserConfiguration(FirebaseAdminConfiguration.class)
-			.withPropertyValues("firebase.admin.enabled=true")
+			.withPropertyValues(
+				"firebase.admin.enabled=true"
+			)
 			.run(context -> {
 				Throwable startupFailure = context.getStartupFailure();
-				assertTrue(startupFailure != null);
-				assertTrue(startupFailure.getMessage().contains("firebase.admin.credentials-path"));
+				assertTrue(startupFailure != null, "Expected startup failure when Firebase is enabled without credentials");
+				String failureMessage = startupFailure.getMessage();
+				assertTrue(
+					failureMessage.contains("Failed to load") || failureMessage.contains("Firebase Admin") || failureMessage.contains("credentials"),
+					"Expected meaningful error message about credentials, got: " + failureMessage
+				);
 			});
 	}
 }

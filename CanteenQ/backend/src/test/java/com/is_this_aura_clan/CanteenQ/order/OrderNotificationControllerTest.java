@@ -53,6 +53,33 @@ class OrderNotificationControllerTest {
 		verify(authService).authenticate("Bearer student-token");
 	}
 
+	@Test
+	void notificationsAcceptsAccessTokenQueryParameter() throws Exception {
+		FirebaseAuthService authService = mock(FirebaseAuthService.class);
+		when(authService.authenticate("Bearer student-token")).thenReturn(
+			new FirebaseAuthenticationResult(true, new FirebaseAuthenticationPrincipal("uid-student", "student@school.edu"), "Firebase token accepted")
+		);
+
+		UserAuthorizationService authorizationService = mock(UserAuthorizationService.class);
+		UserAccount student = new UserAccount("Jane Doe", "2024-0001", "jane@school.edu", "uid-student", UserRole.STUDENT);
+		assignUserId(student, UUID.fromString("11111111-1111-1111-1111-111111111111"));
+		when(authorizationService.requireRole(new FirebaseAuthenticationPrincipal("uid-student", "student@school.edu"), UserRole.STUDENT)).thenReturn(student);
+
+		OrderNotificationService notificationService = mock(OrderNotificationService.class);
+		when(notificationService.subscribeStudent(student.getId())).thenReturn(new SseEmitter());
+
+		MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new OrderNotificationController(authorizationService, notificationService))
+			.addInterceptors(new FirebaseAuthInterceptor(authService))
+			.setControllerAdvice(new com.is_this_aura_clan.CanteenQ.auth.AuthExceptionHandler())
+			.build();
+
+		mockMvc.perform(get("/api/orders/notifications").param("access_token", "student-token"))
+			.andExpect(request().asyncStarted())
+			.andExpect(status().isOk());
+
+		verify(authService).authenticate("Bearer student-token");
+	}
+
 	private void assignUserId(UserAccount userAccount, UUID id) {
 		try {
 			java.lang.reflect.Field idField = UserAccount.class.getDeclaredField("id");
