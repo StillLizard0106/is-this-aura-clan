@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'react-toastify';
 
@@ -9,6 +9,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -36,66 +37,183 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center py-12 px-4">
-      <div className="card max-w-md w-full">
-        <h1 className="text-3xl font-bold text-center mb-2">🍽️ CanteenQ</h1>
-        <p className="text-center text-gray-600 mb-6">Student Pre-Ordering System</p>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+        @font-face {
+          font-family: 'Magics Flavor';
+          src: url('/fonts/Magics-Flavor.ttf') format('truetype');
+          font-display: swap;
+        }
+        .login-wrap * { font-family: 'Manrope', sans-serif; }
+        .login-title {
+          font-family: 'Magics Flavor', cursive;
+          letter-spacing: 0.02em;
+          line-height: 0.94;
+          font-weight: 400;
+          color: #081535;
+          text-rendering: geometricPrecision;
+          font-synthesis: none;
+        }
+        .login-subtitle {
+          color: #5a6a8a;
+          font-size: 11px;
+          margin: 0;
+          letter-spacing: 0.08em;
+          text-transform: none;
+          font-weight: 600;
+          line-height: 1.35;
+        }
+        .login-input {
+          width: 100%;
+          padding: 10px 14px;
+          border-radius: 8px;
+          border: 1.5px solid rgba(208, 216, 240, 0.85);
+          background: rgba(255, 255, 255, 0.82);
+          color: #0a1f4e;
+          font-size: 14px;
+          outline: none;
+          transition: border 0.2s, background 0.2s;
+          box-sizing: border-box;
+        }
+        .login-input::placeholder { color: #9aa5c0; }
+        .login-input:focus { border-color: #f5a800; background: #fff; }
+        .login-input:disabled { opacity: 0.5; }
+        .login-label {
+          color: #0a1f4e;
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 6px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .login-btn {
+          width: 100%;
+          padding: 12px;
+          border-radius: 8px;
+          border: none;
+          background: linear-gradient(135deg, #f5a800, #ffc93c);
+          color: #0a1f4e;
+          font-weight: 700;
+          font-size: 14px;
+          letter-spacing: 0.5px;
+          cursor: pointer;
+          transition: filter 0.2s, opacity 0.2s;
+          box-shadow: 0 12px 24px rgba(245, 168, 0, 0.25);
+        }
+        .login-btn:hover:not(:disabled) { filter: brightness(1.03); }
+        .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .login-card {
+          background: linear-gradient(160deg, rgba(255, 255, 255, 0.98) 0%, rgba(231, 239, 255, 0.95) 55%, rgba(200, 220, 255, 0.9) 100%);
+          border-radius: 20px;
+          padding: 40px 36px;
+          width: 100%;
+          max-width: 420px;
+          box-shadow: 0 24px 60px rgba(2, 12, 27, 0.32), inset 0 1px 0 rgba(255,255,255,0.9);
+          border: 1px solid rgba(255,255,255,0.65);
+          backdrop-filter: blur(20px);
+        }
+      `}</style>
 
-        <form onSubmit={handleSubmit}>
+      <div
+        className="login-wrap min-h-screen flex items-center justify-center px-4"
+        style={{ background: 'linear-gradient(135deg, #051535 0%, #0a2155 50%, #0d2b6b 100%)' }}
+      >
+        <div className="login-card">
+          <div style={{ height: '3px', background: 'linear-gradient(90deg, #f5a800, #ffc93c)', borderRadius: '2px', marginBottom: '28px' }} />
+
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <h1 className="login-title" style={{ fontSize: 58, margin: '0 0 6px' }}>CanteenQ</h1>
+            <p className="login-subtitle">
+              &quot;Masakit na pila? MagCanteenQ&quot;
+            </p>
+          </div>
+
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-              <p className="text-red-700 text-sm">{error}</p>
+            <div
+              style={{
+                marginBottom: 16,
+                padding: '10px 14px',
+                background: 'rgba(220,38,38,0.08)',
+                border: '1px solid rgba(220,38,38,0.3)',
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+              }}
+            >
+              <AlertCircle size={16} color="#dc2626" style={{ marginTop: 1, flexShrink: 0 }} />
+              <p style={{ color: '#dc2626', fontSize: 13, margin: 0 }}>{error}</p>
             </div>
           )}
 
-          <div className="form-group">
-            <label className="form-label flex items-center gap-2">
-              <Mail size={18} /> Email
-            </label>
-            <input
-              type="email"
-              className="input-field"
-              placeholder="your@school.edu"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-            />
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <label className="login-label">
+                <Mail size={14} /> Email
+              </label>
+              <input
+                type="email"
+                className="login-input"
+                placeholder="your@nu.edu.ph"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <label className="login-label">
+                <Lock size={14} /> Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="login-input"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  style={{ paddingRight: 40 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#9aa5c0',
+                    display: 'flex',
+                    padding: 0,
+                  }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="login-btn" disabled={loading} style={{ marginTop: 4 }}>
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(10,31,78,0.1)', textAlign: 'center' }}>
+            <p style={{ color: '#5a6a8a', fontSize: 13, margin: 0 }}>
+              Don't have an account?{' '}
+              <Link to="/register" style={{ color: '#f5a800', fontWeight: 600, textDecoration: 'none' }}>
+                Register here
+              </Link>
+            </p>
           </div>
-
-          <div className="form-group">
-            <label className="form-label flex items-center gap-2">
-              <Lock size={18} /> Password
-            </label>
-            <input
-              type="password"
-              className="input-field"
-              placeholder="••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary w-full mb-4"
-            disabled={loading}
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <div className="border-t pt-4">
-          <p className="text-center text-gray-600 text-sm">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-blue-600 font-semibold hover:underline">
-              Register here
-            </Link>
-          </p>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

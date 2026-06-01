@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 // Components
 import Navbar from './components/shared/Navbar';
 import PrivateRoute from './components/common/PrivateRoute';
+import { useAuth } from './hooks/useAuth';
 
 // Pages - Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -22,6 +23,15 @@ import StaffQueuePage from './pages/staff/StaffQueuePage';
 import StaffReportingPage from './pages/staff/StaffReportingPage';
 
 function App() {
+  const { isAuthenticated, userRole, loading } = useAuth();
+  const fallbackPath = loading
+    ? '/login'
+    : isAuthenticated
+      ? userRole === 'STUDENT'
+        ? '/dashboard'
+        : '/staff/dashboard'
+      : '/login';
+
   return (
     <BrowserRouter>
       <Navbar />
@@ -110,7 +120,7 @@ function App() {
         />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to={fallbackPath} replace />} />
       </Routes>
     </BrowserRouter>
   );
