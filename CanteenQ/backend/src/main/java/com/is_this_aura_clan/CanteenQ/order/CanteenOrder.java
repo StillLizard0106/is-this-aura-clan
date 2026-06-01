@@ -176,7 +176,7 @@ public class CanteenOrder {
     	// CANCELLED is set via cancel(), UNCLAIMED via markUnclaimed() —
     	// both enforce their own preconditions and bypass this method.
 		return switch (currentStatus) {
-			case PENDING -> nextStatus == OrderStatus.PREPARING;
+			case PENDING -> nextStatus == OrderStatus.PREPARING || nextStatus == OrderStatus.CANCELLED;
 			case PREPARING -> nextStatus == OrderStatus.READY;
 			case READY -> nextStatus == OrderStatus.COMPLETED;
 			default -> false;

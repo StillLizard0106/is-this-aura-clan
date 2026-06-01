@@ -1,0 +1,4 @@
+Additional Rules:
+1. Create unit tests for code
+2. Create and update change.log file for new changes
+3. Create a summary for every new feature added

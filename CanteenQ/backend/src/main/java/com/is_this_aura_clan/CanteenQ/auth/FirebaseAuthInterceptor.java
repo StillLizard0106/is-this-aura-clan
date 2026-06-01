@@ -16,7 +16,16 @@ public class FirebaseAuthInterceptor implements HandlerInterceptor {
 
 	@Override
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-		FirebaseAuthenticationResult authenticationResult = firebaseAuthService.authenticate(request.getHeader("Authorization"));
+		if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+			return true;
+		}
+
+		String authorizationHeader = request.getHeader("Authorization");
+		if ((authorizationHeader == null || authorizationHeader.isBlank()) && request.getParameter("access_token") != null) {
+			authorizationHeader = "Bearer " + request.getParameter("access_token");
+		}
+
+		FirebaseAuthenticationResult authenticationResult = firebaseAuthService.authenticate(authorizationHeader);
 		request.setAttribute(FirebaseRequestAttributes.PRINCIPAL, authenticationResult.principal());
 		return true;
 	}

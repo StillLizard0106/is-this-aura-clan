@@ -53,7 +53,13 @@ public class StaffOrderStatusService {
 		);
 		orderNotificationService.publishStudentOrderUpdateAfterCommit(
 			order.getStudent().getId(),
-			new OrderStatusNotification(order.getId(), order.getStatus(), "Your order status changed to " + order.getStatus() + ".")
+			new OrderStatusNotification(
+				order.getId(),
+				order.getStatus(),
+				request.status() == OrderStatus.CANCELLED
+					? "Your order was rejected by staff."
+					: "Your order status changed to " + order.getStatus() + "."
+			)
 		);
 		return staffOrderResponseMapper.toResponse(order);
 	}

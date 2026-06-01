@@ -52,6 +52,9 @@ public class StaffReportService {
 		LocalDateTime start = effectiveStartDate.atStartOfDay();
 		LocalDateTime end = effectiveEndDate.atTime(LocalTime.MAX);
 		List<CanteenOrder> ordersInRange = orderRepository.findByCreatedAtBetween(start, end);
+		BigDecimal totalRevenue = ordersInRange.stream()
+			.map(CanteenOrder::getTotalPrice)
+			.reduce(BigDecimal.ZERO, BigDecimal::add);
 
 		long pendingOrders = orderRepository.countByStatus(OrderStatus.PENDING);
 		long preparingOrders = orderRepository.countByStatus(OrderStatus.PREPARING);
@@ -62,6 +65,7 @@ public class StaffReportService {
 		return new StaffReportResponse(
 			stallRepository.count(),
 			ordersInRange.size(),
+			totalRevenue,
 			ordersInRange.size(),
 			activeOrders,
 			pendingOrders,

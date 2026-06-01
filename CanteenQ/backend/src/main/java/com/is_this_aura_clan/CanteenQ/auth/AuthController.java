@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.is_this_aura_clan.CanteenQ.account.UserAccount;
 import com.is_this_aura_clan.CanteenQ.account.UserAccountSyncService;
 
 @RestController
@@ -25,7 +26,15 @@ public class AuthController {
 		@RequestHeader(name = "Authorization", required = false) String authorizationHeader
 	) {
 		FirebaseAuthenticationResult authenticationResult = firebaseAuthService.authenticate(authorizationHeader);
-		userAccountSyncService.sync(authenticationResult.principal());
-		return ResponseEntity.ok(authenticationResult);
+		UserAccount userAccount = userAccountSyncService.sync(authenticationResult.principal());
+		com.is_this_aura_clan.CanteenQ.account.UserRole role = userAccount == null ? null : userAccount.getRole();
+		return ResponseEntity.ok(
+			new FirebaseAuthenticationResult(
+				authenticationResult.authenticated(),
+				authenticationResult.principal(),
+				authenticationResult.message(),
+				role
+			)
+		);
 	}
 }
