@@ -25,13 +25,20 @@ public class OrderNotificationService {
 
 	void registerEmitter(UUID studentId, SseEmitter emitter) {
 		studentEmitters.computeIfAbsent(studentId, ignored -> new CopyOnWriteArrayList<>()).add(emitter);
+
+		// All three callbacks do the same thing: remove the emitter so we stop
+    	// trying to send to a dead connection. The emitter itself handles closing.
 		Runnable cleanup = () -> removeEmitter(studentId, emitter);
-		emitter.onCompletion(cleanup);
-		emitter.onTimeout(cleanup);
-		emitter.onError(error -> cleanup.run());
+		emitter.onCompletion(cleanup); // client disconnected cleanly
+		emitter.onTimeout(cleanup); // SseEmitter timeout reached (0L = never, but kept for safety)
+		emitter.onError(error -> cleanup.run()); // network error or write failure
 	}
 
 	public void publishStudentOrderUpdateAfterCommit(UUID studentId, OrderStatusNotification notification) {
+
+	// SSE events must be sent after the transaction commits, not during.
+    // If we sent the event mid-transaction and the commit later failed,
+    // the student would see a status update for a change that never actually happened.
 		if (TransactionSynchronizationManager.isSynchronizationActive()) {
 			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 				@Override
@@ -42,6 +49,8 @@ public class OrderNotificationService {
 			return;
 		}
 
+		// No active transaction (e.g. called from a test or a non-transactional context) —
+    	// publish immediately.
 		publishStudentOrderUpdate(studentId, notification);
 	}
 
@@ -55,6 +64,10 @@ public class OrderNotificationService {
 			try {
 				emitter.send(notification);
 			} catch (IOException | IllegalStateException exception) {
+
+				// IllegalStateException is thrown by Spring when send() is called
+        		// after the emitter has already been completed or timed out.
+        		// We treat it the same as an IOException: remove the stale emitter.
 				removeEmitter(studentId, emitter);
 			}
 		}

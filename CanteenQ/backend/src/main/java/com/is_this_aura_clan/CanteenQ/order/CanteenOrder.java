@@ -76,6 +76,12 @@ public class CanteenOrder {
 	@PrePersist
 	void prePersist() {
 		LocalDateTime now = LocalDateTime.now();
+
+		/**
+		 * Capture a single timestamp so createdAt and updatedAt are identical on insert.
+		 * createdAt is guarded against re-assignment because the column is marked updatable=false,
+		 * but we check anyway in case this method is ever called manually in tests.
+		 */
 		if (createdAt == null) {
 			createdAt = now;
 		}
@@ -121,6 +127,8 @@ public class CanteenOrder {
 
 	public void updateStatus(OrderStatus nextStatus) {
 		Objects.requireNonNull(nextStatus, "nextStatus must not be null");
+		// Idempotent: setting the same status is a no-op rather than an error,
+    	// so staff retrying a PATCH request won't get an unexpected 400.
 		if (status == nextStatus) {
 			return;
 		}
@@ -135,6 +143,9 @@ public class CanteenOrder {
 		if (status != OrderStatus.PENDING) {
 			throw new OrderActionException("Only pending orders can be cancelled.");
 		}
+
+		// Students cannot cancel within 15 minutes of pickup — by that point
+    	// the stall has likely already started preparing the order.
 		if (now.isAfter(pickupSlot.minusMinutes(15))) {
 			throw new OrderActionException("Orders can only be cancelled at least 15 minutes before pickup.");
 		}
@@ -146,6 +157,10 @@ public class CanteenOrder {
 		if (status != OrderStatus.READY) {
 			throw new OrderActionException("Only ready orders can be marked as unclaimed.");
 		}
+
+		// Give students a 15-minute grace period after the pickup slot before
+    	// the order is considered abandoned. This matches the cancellation window
+    	// and the scheduler's cutoff in OrderUnclaimedScheduler.
 		if (now.isBefore(pickupSlot.plusMinutes(15))) {
 			throw new OrderActionException("Orders can only be marked unclaimed after the pickup grace period.");
 		}
@@ -157,6 +172,9 @@ public class CanteenOrder {
 	}
 
 	private boolean isValidTransition(OrderStatus currentStatus, OrderStatus nextStatus) {
+		// Only staff-driven forward transitions are handled here.
+    	// CANCELLED is set via cancel(), UNCLAIMED via markUnclaimed() —
+    	// both enforce their own preconditions and bypass this method.
 		return switch (currentStatus) {
 			case PENDING -> nextStatus == OrderStatus.PREPARING;
 			case PREPARING -> nextStatus == OrderStatus.READY;

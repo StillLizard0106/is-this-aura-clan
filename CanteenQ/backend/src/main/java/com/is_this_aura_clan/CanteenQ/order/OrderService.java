@@ -225,6 +225,13 @@ public class OrderService {
 			.orElse(1);
 	}
 
+	/**
+     * An internal value object representing one resolved line item within an order.
+     *
+     * @param menuItem the resolved menu item entity
+     * @param quantity the number of units ordered
+     * @param subtotal the pre-computed price × quantity
+     */
 	private record OrderLine(MenuItem menuItem, int quantity, BigDecimal subtotal) {
 	}
 }
