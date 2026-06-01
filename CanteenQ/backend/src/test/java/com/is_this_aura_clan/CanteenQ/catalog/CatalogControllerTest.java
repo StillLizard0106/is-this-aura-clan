@@ -21,7 +21,7 @@ class CatalogControllerTest {
 	void stallsEndpointReturnsAllStalls() throws Exception {
 		CatalogService service = mock(CatalogService.class);
 		when(service.listStalls()).thenReturn(
-			List.of(new StallResponse(UUID.fromString("11111111-1111-1111-1111-111111111111"), "Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM"))
+			List.of(new StallResponse(UUID.fromString("11111111-1111-1111-1111-111111111111"), "Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM", 100, 100))
 		);
 
 		MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new CatalogController(service))

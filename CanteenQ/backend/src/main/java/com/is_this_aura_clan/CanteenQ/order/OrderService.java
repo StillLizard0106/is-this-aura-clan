@@ -18,6 +18,7 @@ import com.is_this_aura_clan.CanteenQ.account.UserRole;
 import com.is_this_aura_clan.CanteenQ.auth.FirebaseAuthenticationPrincipal;
 import com.is_this_aura_clan.CanteenQ.catalog.MenuItem;
 import com.is_this_aura_clan.CanteenQ.catalog.MenuItemRepository;
+import com.is_this_aura_clan.CanteenQ.catalog.Stall;
 import com.is_this_aura_clan.CanteenQ.catalog.StallRepository;
 
 /**
@@ -49,6 +50,9 @@ public class OrderService {
 	 */
 
 	private static final List<OrderStatus> ACTIVE_STATUSES = List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY);
+	private static final LocalTime PICKUP_OPEN_TIME = LocalTime.of(7, 0);
+	private static final LocalTime PICKUP_CLOSE_TIME = LocalTime.of(18, 0);
+	private static final long PICKUP_WINDOW_DAYS = 1L;
 
 	private final UserAuthorizationService userAuthorizationService;
 	private final UserAccountRepository userAccountRepository;
@@ -123,9 +127,8 @@ public class OrderService {
 			.or(() -> userAccountRepository.findByEmail(principal.email()))
 			.orElseThrow(() -> new OrderPlacementException("No student account found for the authenticated user."));
 
-		if (!stallRepository.existsById(request.stallId())) {
-			throw new OrderPlacementException("No stall found for id " + request.stallId());
-		}
+		Stall stall = stallRepository.findById(request.stallId())
+			.orElseThrow(() -> new OrderPlacementException("No stall found for id " + request.stallId()));
 
 		validatePickupSlot(request.pickupSlot());
 		assertNoActiveOrder(student, request.stallId());
@@ -138,7 +141,7 @@ public class OrderService {
 			.map(OrderLine::subtotal)
 			.reduce(BigDecimal.ZERO, BigDecimal::add);
 
-		int queueNumber = nextQueueNumber(request.stallId(), request.pickupSlot());
+		int queueNumber = nextQueueNumber(request.stallId(), request.pickupSlot(), stall.getQueueLimit());
 		CanteenOrder order = new CanteenOrder(student, request.stallId(), totalPrice, request.pickupSlot(), queueNumber);
 		lines.forEach(line -> order.addItem(new OrderItem(order, line.menuItem(), line.quantity(), line.subtotal())));
 
@@ -157,8 +160,18 @@ public class OrderService {
 	 */
 	private void validatePickupSlot(LocalDateTime pickupSlot) {
 		LocalDateTime now = LocalDateTime.now(clock);
-		if (pickupSlot.isBefore(now.plusMinutes(15))) {
+		LocalDateTime earliestPickup = now.plusMinutes(15);
+		LocalDateTime latestPickup = now.plusWeeks(PICKUP_WINDOW_DAYS);
+		LocalTime pickupTime = pickupSlot.toLocalTime();
+
+		if (pickupSlot.isBefore(earliestPickup)) {
 			throw new OrderPlacementException("Pickup slot must be at least 15 minutes in the future.");
+		}
+		if (pickupSlot.isAfter(latestPickup)) {
+			throw new OrderPlacementException("Pickup slot must be within one week from now.");
+		}
+		if (pickupTime.isBefore(PICKUP_OPEN_TIME) || pickupTime.isAfter(PICKUP_CLOSE_TIME)) {
+			throw new OrderPlacementException("Pickup slot must be between 7:00 AM and 6:00 PM.");
 		}
 	}
 
@@ -216,13 +229,16 @@ public class OrderService {
      * @param pickupSlot the requested pickup time (only the date portion is used)
      * @return the next available queue number
 	 */
-	private int nextQueueNumber(java.util.UUID stallId, LocalDateTime pickupSlot) {
+	
+	private int nextQueueNumber(java.util.UUID stallId, LocalDateTime pickupSlot, int queueLimit) {
 		LocalDate date = pickupSlot.toLocalDate();
 		LocalDateTime start = date.atStartOfDay();
 		LocalDateTime end = date.atTime(LocalTime.MAX);
-		return orderRepository.findTopByStallIdAndPickupSlotBetweenOrderByQueueNumberDesc(stallId, start, end)
-			.map(existing -> existing.getQueueNumber() + 1)
-			.orElse(1);
+		long activeOrders = orderRepository.countByStallIdAndPickupSlotBetweenAndStatusIn(stallId, start, end, ACTIVE_STATUSES);
+		if (activeOrders >= queueLimit) {
+			throw new OrderPlacementException("Queue limit reached for this stall.");
+		}
+		return Math.toIntExact(activeOrders + 1);
 	}
 
 	private record OrderLine(MenuItem menuItem, int quantity, BigDecimal subtotal) {

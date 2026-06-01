@@ -4,3 +4,5 @@ Additional Rules:
 3. Create a summary for every new feature added.
 4. Always ask for confirmation before starting a new feature.
 5. Before making a feature as completed, always fix build erros.
+6. Follow KISS, DRY, YAGNI
+7. Apply OOP best pattern

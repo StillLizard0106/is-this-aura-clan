@@ -1,0 +1,989 @@
+# Go, Grow, Glow! — MVP Low-Level Technical Requirements
+
+## Product Management & Engineering Breakdown
+
+Tech Stack:
+
+* Frontend: React + TypeScript
+* Backend: Java Spring Boot
+* Database: PostgreSQL
+
+---
+
+# 1. MVP PRODUCT STRATEGY
+
+The biggest risk of this project is:
+
+> Feature overload causing incomplete implementation.
+
+The MVP must prioritize:
+
+1. Core productivity loop
+2. Consistency tracking
+3. Sustainable UX simplicity
+4. Stable architecture
+5. Extensible domain modeling
+
+The MVP should NOT initially prioritize:
+
+* AI
+* Advanced gamification
+* Team collaboration
+* Calendar sync
+* Wearable integrations
+* Complex burnout prediction ML
+
+---
+
+# 2. CORE MVP OBJECTIVE
+
+The MVP succeeds if users can:
+
+1. Register/login
+2. Create/manage tasks
+3. Track habits
+4. Log mood/productivity
+5. View a daily dashboard
+6. See simple productivity insights
+7. Maintain streaks/consistency
+
+Everything else is secondary.
+
+---
+
+# 3. MVP FEATURE PRIORITIZATION
+
+# Priority Matrix
+
+| Priority | Module                   | Include in MVP |
+| -------- | ------------------------ | -------------- |
+| P0       | Authentication           | YES            |
+| P0       | Task Management          | YES            |
+| P0       | Habit Tracking           | YES            |
+| P0       | Dashboard                | YES            |
+| P0       | Productivity Gauge       | YES            |
+| P1       | Wellness Logging         | YES            |
+| P1       | Basic Analytics          | YES            |
+| P1       | Notifications            | Basic Only     |
+| P2       | Growth Tracking          | LIMITED        |
+| P2       | Gamification             | LIMITED        |
+| P3       | AI Features              | NO             |
+| P3       | Smart Burnout Prediction | NO             |
+| P3       | Team Features            | NO             |
+
+---
+
+# 4. MVP SYSTEM MODULES
+
+# MODULE 1 — Authentication System (P0)
+
+## Goal
+
+Secure user access and personalized data ownership.
+
+## Functional Requirements
+
+### User Registration
+
+Fields:
+
+* email
+* username
+* password
+
+Validation:
+
+* unique email
+* password minimum length
+* valid email format
+
+### User Login
+
+Requirements:
+
+* JWT token generation
+* secure authentication
+* invalid credential handling
+
+### Session Persistence
+
+Frontend stores:
+
+* JWT token
+* user profile state
+
+### Forgot Password (Optional MVP-lite)
+
+Can be deferred if time constrained.
+
+---
+
+## Backend Requirements
+
+### Entities
+
+```java
+User
+```
+
+Fields:
+
+```java
+id
+email
+username
+passwordHash
+createdAt
+updatedAt
+```
+
+---
+
+## API Endpoints
+
+```http
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/users/me
+```
+
+---
+
+## Technical Requirements
+
+### Security
+
+* BCrypt password hashing
+* JWT authentication
+* Stateless auth
+
+### Design Patterns
+
+* Service Layer Pattern
+* DTO Pattern
+
+---
+
+# MODULE 2 — Task Management (P0)
+
+## Goal
+
+Allow users to manage daily productivity.
+
+---
+
+## Core MVP Features
+
+### Create Task
+
+Fields:
+
+* title
+* description
+* priority
+* dueDate
+* status
+
+### Edit Task
+
+### Delete Task
+
+### Complete Task
+
+### View Daily Tasks
+
+---
+
+## Deferred Features
+
+NOT MVP:
+
+* recurring tasks
+* calendar sync
+* subtasks
+* attachments
+
+---
+
+## Entity Design
+
+```java
+Task
+```
+
+Fields:
+
+```java
+id
+title
+description
+priority
+status
+dueDate
+completedAt
+createdAt
+userId
+```
+
+---
+
+## Enums
+
+```java
+TaskPriority
+LOW
+MEDIUM
+HIGH
+```
+
+```java
+TaskStatus
+PENDING
+COMPLETED
+OVERDUE
+```
+
+---
+
+## APIs
+
+```http
+GET    /api/tasks
+POST   /api/tasks
+PUT    /api/tasks/{id}
+DELETE /api/tasks/{id}
+PATCH  /api/tasks/{id}/complete
+```
+
+---
+
+## Frontend Requirements
+
+### Components
+
+```text
+TaskList
+TaskCard
+TaskForm
+TaskFilters
+```
+
+---
+
+## UX Requirements
+
+* one-click completion
+* mobile-friendly list
+* fast task entry
+* low cognitive load
+
+---
+
+# MODULE 3 — Habit Tracker (P0)
+
+## Goal
+
+Build consistency-based engagement.
+
+This is a major retention feature.
+
+---
+
+## Core MVP Features
+
+### Create Habit
+
+Fields:
+
+* name
+* frequency
+* targetCount
+
+### Daily Habit Check-in
+
+### Streak Tracking
+
+### Habit Completion History
+
+---
+
+## Deferred Features
+
+* advanced recovery system
+* smart habit recommendations
+
+---
+
+## Entities
+
+```java
+Habit
+HabitLog
+```
+
+---
+
+### Habit
+
+Fields:
+
+```java
+id
+name
+frequency
+targetCount
+createdAt
+userId
+```
+
+---
+
+### HabitLog
+
+Fields:
+
+```java
+id
+habitId
+completedDate
+status
+```
+
+---
+
+## APIs
+
+```http
+GET    /api/habits
+POST   /api/habits
+PATCH  /api/habits/{id}/check-in
+GET    /api/habits/{id}/history
+```
+
+---
+
+## Important Logic
+
+### Streak Calculation
+
+Must:
+
+* tolerate timezone differences
+* calculate consecutive completion days
+
+---
+
+## Suggested Pattern
+
+### Strategy Pattern
+
+Future extensibility:
+
+```java
+DailyHabitStrategy
+WeeklyHabitStrategy
+CustomHabitStrategy
+```
+
+For MVP:
+Only DailyHabitStrategy implemented.
+
+---
+
+# MODULE 4 — Productivity Gauge (P0)
+
+## Goal
+
+Simple emotional/productivity reflection.
+
+This becomes a differentiator.
+
+---
+
+## MVP Features
+
+User rates day:
+
+* RED → poor day
+* YELLOW → moderate
+* GREEN → productive/balanced
+
+Optional:
+
+* short reflection note
+
+---
+
+## Entity
+
+```java
+DailyCheckIn
+```
+
+Fields:
+
+```java
+id
+productivityLevel
+moodNote
+energyLevel
+checkInDate
+userId
+```
+
+---
+
+## Enums
+
+```java
+ProductivityLevel
+RED
+YELLOW
+GREEN
+```
+
+---
+
+## APIs
+
+```http
+POST /api/check-ins
+GET  /api/check-ins/history
+```
+
+---
+
+## UX Requirements
+
+* frictionless input
+* max 10 seconds to submit
+
+---
+
+# MODULE 5 — Wellness Logging (P1)
+
+## Goal
+
+Support sustainable productivity.
+
+---
+
+## MVP Scope
+
+### Features
+
+* mood logging
+* energy level logging
+* reflection note
+
+---
+
+## Deferred
+
+* sleep tracking
+* stress algorithms
+* burnout prediction AI
+
+---
+
+## Entity
+
+Could extend:
+
+```java
+DailyCheckIn
+```
+
+Avoid premature abstraction.
+
+---
+
+# MODULE 6 — Dashboard (P0)
+
+## Goal
+
+Single source of truth.
+
+This is the application's most important screen.
+
+---
+
+## Dashboard Widgets
+
+### Required MVP Widgets
+
+| Widget             | Priority |
+| ------------------ | -------- |
+| Today's Tasks      | P0       |
+| Habit Progress     | P0       |
+| Productivity Gauge | P0       |
+| Current Streaks    | P0       |
+| Completion Summary | P0       |
+
+---
+
+## Dashboard Backend Aggregation
+
+Avoid excessive frontend calls.
+
+Create:
+
+```http
+GET /api/dashboard
+```
+
+Return:
+
+```json
+{
+  "todayTasks": [],
+  "habitSummary": {},
+  "dailyCheckIn": {},
+  "productivityScore": 72,
+  "currentStreaks": []
+}
+```
+
+---
+
+## Important Architecture Decision
+
+DO NOT let frontend calculate analytics.
+
+Backend owns:
+
+* productivity calculations
+* streak logic
+* consistency scoring
+
+This ensures:
+
+* centralized business rules
+* stable analytics
+* future AI compatibility
+
+---
+
+# MODULE 7 — Basic Analytics (P1)
+
+## Goal
+
+Provide meaningful feedback without complexity.
+
+---
+
+## MVP Analytics
+
+### Metrics
+
+* tasks completed this week
+* habit consistency %
+* streak count
+* productivity gauge trends
+
+---
+
+## Avoid in MVP
+
+* heatmaps
+* predictive analytics
+* burnout AI
+* advanced visualizations
+
+---
+
+## API
+
+```http
+GET /api/analytics/summary
+```
+
+---
+
+## Suggested Backend Design
+
+### Strategy Pattern
+
+```java
+AnalyticsCalculator
+```
+
+Implementations:
+
+```java
+TaskAnalyticsCalculator
+HabitAnalyticsCalculator
+ConsistencyCalculator
+```
+
+---
+
+# MODULE 8 — Notifications (P1-lite)
+
+## Goal
+
+Basic engagement and reminders.
+
+---
+
+## MVP Scope
+
+ONLY:
+
+* deadline reminders
+* habit reminders
+
+---
+
+## Do NOT Build Yet
+
+* smart notifications
+* adaptive reminders
+* AI encouragement engine
+
+---
+
+## Suggested Implementation
+
+### Scheduled Jobs
+
+Use:
+
+```java
+@Scheduled
+```
+
+---
+
+# MODULE 9 — Growth Tracking (P2-lite)
+
+## MVP Simplification
+
+Only:
+
+* learning goals
+* hours invested
+
+---
+
+## Avoid
+
+* complex skill trees
+* achievement roadmaps
+
+---
+
+# MODULE 10 — Gamification (P2-lite)
+
+## MVP Scope
+
+ONLY:
+
+* streak counters
+* simple XP
+* milestone badges
+
+---
+
+## Avoid
+
+* complex leveling systems
+* economy systems
+* competitive rankings
+
+---
+
+# 5. SYSTEM ARCHITECTURE
+
+# Backend Architecture
+
+Use Layered Architecture.
+
+```text
+controller/
+service/
+repository/
+entity/
+dto/
+mapper/
+security/
+config/
+exception/
+```
+
+---
+
+# Recommended Backend Flow
+
+```text
+Controller
+→ Service
+→ Repository
+→ Database
+```
+
+---
+
+# Critical Rule
+
+NEVER expose entities directly to frontend.
+
+Always use DTOs.
+
+---
+
+# Frontend Architecture
+
+```text
+src/
+ ├── api/
+ ├── components/
+ ├── pages/
+ ├── hooks/
+ ├── context/
+ ├── services/
+ ├── types/
+ ├── layouts/
+ └── utils/
+```
+
+---
+
+# Frontend State Strategy
+
+Use:
+
+```text
+Context API
+```
+
+NOT Redux initially.
+
+Redux is unnecessary MVP complexity.
+
+---
+
+# 6. DATABASE DESIGN (MVP)
+
+# Core Tables
+
+| Table           | Purpose               |
+| --------------- | --------------------- |
+| users           | authentication        |
+| tasks           | productivity          |
+| habits          | habit system          |
+| habit_logs      | habit completion      |
+| daily_check_ins | wellness/productivity |
+| notifications   | reminders             |
+
+---
+
+# Relationships
+
+```text
+User
+ ├── Tasks
+ ├── Habits
+ │     └── HabitLogs
+ └── DailyCheckIns
+```
+
+---
+
+# 7. PRODUCTIVITY SCORE SYSTEM (MVP)
+
+# Simplified Initial Formula
+
+Avoid AI initially.
+
+Example:
+
+* Tasks completed → 40%
+* Habit consistency → 40%
+* Wellness balance → 20%
+
+---
+
+Example:
+
+ProductivityScore=(0.4\times TaskCompletion)+(0.4\times HabitConsistency)+(0.2\times WellnessBalance)
+
+---
+
+## Important Rule
+
+This score MUST:
+
+* encourage balance
+* avoid rewarding overwork
+
+---
+
+# 8. CRITICAL NON-FUNCTIONAL REQUIREMENTS
+
+# Performance
+
+* Dashboard load < 2 seconds
+* API response < 500ms average
+
+---
+
+# Security
+
+* JWT auth
+* hashed passwords
+* route protection
+* validation on all endpoints
+
+---
+
+# Reliability
+
+* prevent duplicate habit check-ins
+* transactional updates
+* centralized exception handling
+
+---
+
+# Maintainability
+
+* modular services
+* interface-driven architecture
+* low coupling
+* high cohesion
+
+---
+
+# Scalability
+
+Design for:
+
+* mobile support later
+* AI integrations later
+* analytics expansion later
+
+WITHOUT implementing them now.
+
+---
+
+# 9. RECOMMENDED DESIGN PATTERNS
+
+# MUST USE
+
+| Pattern            | Why                     |
+| ------------------ | ----------------------- |
+| Service Layer      | business separation     |
+| DTO Pattern        | API stability           |
+| Repository Pattern | database abstraction    |
+| Strategy Pattern   | scoring/analytics       |
+| Builder Pattern    | complex object creation |
+
+---
+
+# AVOID IN MVP
+
+| Pattern        | Why Avoid              |
+| -------------- | ---------------------- |
+| Observer       | unnecessary complexity |
+| Event Sourcing | overengineering        |
+| CQRS           | premature scaling      |
+| Microservices  | wrong scale            |
+
+---
+
+# 10. MVP DEVELOPMENT PHASES
+
+# Phase 1 — Foundation
+
+Priority:
+
+* Auth
+* User system
+* Database setup
+* Project architecture
+
+---
+
+# Phase 2 — Productivity Core
+
+Priority:
+
+* Tasks
+* Habits
+* Dashboard
+
+---
+
+# Phase 3 — Wellness Layer
+
+Priority:
+
+* Daily check-ins
+* Productivity gauge
+* Basic analytics
+
+---
+
+# Phase 4 — Engagement
+
+Priority:
+
+* Notifications
+* Streaks
+* Simple gamification
+
+---
+
+# Phase 5 — Polish
+
+Priority:
+
+* responsive UI
+* onboarding UX
+* optimization
+
+---
+
+# 11. MOST IMPORTANT MVP PRINCIPLES
+
+# Principle 1 — Simplicity First
+
+Do not compete with Notion.
+
+Compete with:
+
+> clarity and sustainability.
+
+---
+
+# Principle 2 — Reduce Cognitive Load
+
+Every screen should answer:
+
+> “What should I do next?”
+
+---
+
+# Principle 3 — Sustainable Productivity
+
+Never reward unhealthy overworking.
+
+---
+
+# Principle 4 — Fast User Feedback
+
+Users should feel progress daily.
+
+---
+
+# Principle 5 — Stable Core Before Smart Features
+
+AI without stable data models becomes technical debt.
+
+Build:
+
+* reliable tracking
+* consistent analytics
+* clean architecture
+
+FIRST.

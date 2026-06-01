@@ -48,4 +48,21 @@ class UserAccountSyncServiceTest {
 		assertEquals("jane.doe@school.edu", saved.getEmail());
 		assertEquals("uid-123", saved.getFirebaseUid());
 	}
+
+	@Test
+	void syncPromotesDemoStaffEmailToStaffRole() {
+		UserAccountRepository repository = mock(UserAccountRepository.class);
+		when(repository.findByFirebaseUid("uid-staff")).thenReturn(Optional.empty());
+		when(repository.findByEmail("staff@canteen.local")).thenReturn(Optional.empty());
+		when(repository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		UserAccountSyncService service = new UserAccountSyncService(repository);
+
+		UserAccount saved = service.sync(new FirebaseAuthenticationPrincipal("uid-staff", "staff@canteen.local"));
+
+		assertEquals("Staff", saved.getName());
+		assertEquals("staff@canteen.local", saved.getEmail());
+		assertEquals("uid-staff", saved.getFirebaseUid());
+		assertEquals(UserRole.STAFF, saved.getRole());
+	}
 }

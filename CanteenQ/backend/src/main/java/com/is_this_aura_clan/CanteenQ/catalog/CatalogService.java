@@ -6,15 +6,22 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.is_this_aura_clan.CanteenQ.order.OrderRepository;
+import com.is_this_aura_clan.CanteenQ.order.OrderStatus;
+
 @Service
 public class CatalogService {
 
+	private static final List<OrderStatus> ACTIVE_STATUSES = List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY);
+
 	private final StallRepository stallRepository;
 	private final MenuItemRepository menuItemRepository;
+	private final OrderRepository orderRepository;
 
-	public CatalogService(StallRepository stallRepository, MenuItemRepository menuItemRepository) {
+	public CatalogService(StallRepository stallRepository, MenuItemRepository menuItemRepository, OrderRepository orderRepository) {
 		this.stallRepository = stallRepository;
 		this.menuItemRepository = menuItemRepository;
+		this.orderRepository = orderRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -38,7 +45,16 @@ public class CatalogService {
 	}
 
 	private StallResponse toStallResponse(Stall stall) {
-		return new StallResponse(stall.getId(), stall.getStallName(), stall.getVendorName(), stall.getOperatingHours());
+		int queueLimit = stall.getQueueLimit();
+		int queueSlotsLeft = Math.max(0, queueLimit - Math.toIntExact(orderRepository.countByStallIdAndStatusIn(stall.getId(), ACTIVE_STATUSES)));
+		return new StallResponse(
+			stall.getId(),
+			stall.getStallName(),
+			stall.getVendorName(),
+			stall.getOperatingHours(),
+			queueLimit,
+			queueSlotsLeft
+		);
 	}
 
 	private MenuItemResponse toMenuItemResponse(MenuItem menuItem) {
