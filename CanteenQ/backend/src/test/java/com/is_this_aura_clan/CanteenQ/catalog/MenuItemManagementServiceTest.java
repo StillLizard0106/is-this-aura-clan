@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import com.is_this_aura_clan.CanteenQ.account.UserAuthorizationService;
 import com.is_this_aura_clan.CanteenQ.account.UserRole;
 import com.is_this_aura_clan.CanteenQ.auth.FirebaseAuthenticationPrincipal;
+import com.is_this_aura_clan.CanteenQ.order.OrderItemRepository;
 
 class MenuItemManagementServiceTest {
 
@@ -25,6 +26,7 @@ class MenuItemManagementServiceTest {
 	void createMenuItemSavesNewItemForStaff() {
 		StallRepository stallRepository = mock(StallRepository.class);
 		MenuItemRepository menuItemRepository = mock(MenuItemRepository.class);
+		OrderItemRepository orderItemRepository = mock(OrderItemRepository.class);
 		UserAuthorizationService authorizationService = mock(UserAuthorizationService.class);
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), eq(UserRole.STAFF))).thenReturn(null);
 		UUID stallId = UUID.randomUUID();
@@ -33,7 +35,7 @@ class MenuItemManagementServiceTest {
 		when(menuItemRepository.findByStall_IdAndItemNameIgnoreCase(stallId, "Chicken Rice")).thenReturn(Optional.empty());
 		when(menuItemRepository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		MenuItemManagementService service = new MenuItemManagementService(stallRepository, menuItemRepository, authorizationService);
+		MenuItemManagementService service = new MenuItemManagementService(stallRepository, menuItemRepository, orderItemRepository, authorizationService);
 
 		MenuItemResponse response = service.createMenuItem(
 			new FirebaseAuthenticationPrincipal("uid-staff", "staff@school.edu"),
@@ -49,6 +51,7 @@ class MenuItemManagementServiceTest {
 	void updateMenuItemChangesExistingItem() {
 		StallRepository stallRepository = mock(StallRepository.class);
 		MenuItemRepository menuItemRepository = mock(MenuItemRepository.class);
+		OrderItemRepository orderItemRepository = mock(OrderItemRepository.class);
 		UserAuthorizationService authorizationService = mock(UserAuthorizationService.class);
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), eq(UserRole.STAFF))).thenReturn(null);
 		UUID stallId = UUID.randomUUID();
@@ -60,7 +63,7 @@ class MenuItemManagementServiceTest {
 		when(menuItemRepository.findByStall_IdAndItemNameIgnoreCase(stallId, "BBQ Rice")).thenReturn(Optional.empty());
 		when(menuItemRepository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		MenuItemManagementService service = new MenuItemManagementService(stallRepository, menuItemRepository, authorizationService);
+		MenuItemManagementService service = new MenuItemManagementService(stallRepository, menuItemRepository, orderItemRepository, authorizationService);
 
 		MenuItemResponse response = service.updateMenuItem(
 			new FirebaseAuthenticationPrincipal("uid-staff", "staff@school.edu"),
@@ -78,6 +81,7 @@ class MenuItemManagementServiceTest {
 	void deleteMenuItemRemovesExistingItem() {
 		StallRepository stallRepository = mock(StallRepository.class);
 		MenuItemRepository menuItemRepository = mock(MenuItemRepository.class);
+		OrderItemRepository orderItemRepository = mock(OrderItemRepository.class);
 		UserAuthorizationService authorizationService = mock(UserAuthorizationService.class);
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), eq(UserRole.STAFF))).thenReturn(null);
 		UUID stallId = UUID.randomUUID();
@@ -86,8 +90,9 @@ class MenuItemManagementServiceTest {
 		MenuItem existing = new MenuItem(stall, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", true);
 		when(stallRepository.findById(stallId)).thenReturn(Optional.of(stall));
 		when(menuItemRepository.findByIdAndStall_Id(menuItemId, stallId)).thenReturn(Optional.of(existing));
+		when(orderItemRepository.existsByMenuItem_Id(menuItemId)).thenReturn(false);
 
-		MenuItemManagementService service = new MenuItemManagementService(stallRepository, menuItemRepository, authorizationService);
+		MenuItemManagementService service = new MenuItemManagementService(stallRepository, menuItemRepository, orderItemRepository, authorizationService);
 
 		service.deleteMenuItem(new FirebaseAuthenticationPrincipal("uid-staff", "staff@school.edu"), stallId, menuItemId);
 
@@ -95,9 +100,35 @@ class MenuItemManagementServiceTest {
 	}
 
 	@Test
+	void deleteUnavailableMenuItemWithHistoryReturnsUnavailableMessage() {
+		StallRepository stallRepository = mock(StallRepository.class);
+		MenuItemRepository menuItemRepository = mock(MenuItemRepository.class);
+		OrderItemRepository orderItemRepository = mock(OrderItemRepository.class);
+		UserAuthorizationService authorizationService = mock(UserAuthorizationService.class);
+		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), eq(UserRole.STAFF))).thenReturn(null);
+		UUID stallId = UUID.randomUUID();
+		UUID menuItemId = UUID.randomUUID();
+		Stall stall = new Stall("Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM");
+		MenuItem existing = new MenuItem(stall, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", false);
+		when(stallRepository.findById(stallId)).thenReturn(Optional.of(stall));
+		when(menuItemRepository.findByIdAndStall_Id(menuItemId, stallId)).thenReturn(Optional.of(existing));
+		when(orderItemRepository.existsByMenuItem_Id(menuItemId)).thenReturn(true);
+
+		MenuItemManagementService service = new MenuItemManagementService(stallRepository, menuItemRepository, orderItemRepository, authorizationService);
+
+		MenuItemDeletionConflictException exception = assertThrows(
+			MenuItemDeletionConflictException.class,
+			() -> service.deleteMenuItem(new FirebaseAuthenticationPrincipal("uid-staff", "staff@school.edu"), stallId, menuItemId)
+		);
+
+		assertEquals("Cannot delete menu item because it has existing order history. This item is already unavailable.", exception.getMessage());
+	}
+
+	@Test
 	void createMenuItemRejectsDuplicateNamesWithinTheSameStall() {
 		StallRepository stallRepository = mock(StallRepository.class);
 		MenuItemRepository menuItemRepository = mock(MenuItemRepository.class);
+		OrderItemRepository orderItemRepository = mock(OrderItemRepository.class);
 		UserAuthorizationService authorizationService = mock(UserAuthorizationService.class);
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), eq(UserRole.STAFF))).thenReturn(null);
 		UUID stallId = UUID.randomUUID();
@@ -106,7 +137,7 @@ class MenuItemManagementServiceTest {
 		when(menuItemRepository.findByStall_IdAndItemNameIgnoreCase(stallId, "Chicken Rice"))
 			.thenReturn(Optional.of(new MenuItem(stall, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", true)));
 
-		MenuItemManagementService service = new MenuItemManagementService(stallRepository, menuItemRepository, authorizationService);
+		MenuItemManagementService service = new MenuItemManagementService(stallRepository, menuItemRepository, orderItemRepository, authorizationService);
 
 		assertThrows(
 			DuplicateMenuItemException.class,

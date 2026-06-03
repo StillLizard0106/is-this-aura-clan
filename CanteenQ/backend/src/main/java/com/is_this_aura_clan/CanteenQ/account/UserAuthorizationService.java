@@ -21,10 +21,20 @@ public class UserAuthorizationService {
 			.or(() -> userAccountRepository.findByEmail(principal.email()))
 			.orElseThrow(() -> new InsufficientRoleException("No registered account found for the authenticated user."));
 
-		if (userAccount.getRole() != requiredRole) {
+		if (!hasCompatibleRole(userAccount.getRole(), requiredRole)) {
 			throw new InsufficientRoleException("Access requires " + requiredRole + " role.");
 		}
 
 		return userAccount;
+	}
+
+	private boolean hasCompatibleRole(UserRole actualRole, UserRole requiredRole) {
+		if (actualRole == requiredRole) {
+			return true;
+		}
+		if (requiredRole == UserRole.STAFF) {
+			return actualRole == UserRole.ADMIN;
+		}
+		return false;
 	}
 }

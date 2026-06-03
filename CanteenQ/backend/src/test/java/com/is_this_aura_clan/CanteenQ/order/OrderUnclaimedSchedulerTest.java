@@ -42,12 +42,12 @@ class OrderUnclaimedSchedulerTest {
 		MenuItem menuItem = new MenuItem(stall, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", true);
 		assignMenuItemId(menuItem, UUID.fromString("44444444-4444-4444-4444-444444444444"));
 
-		CanteenOrder dueOrder = new CanteenOrder(studentOne, stall.getId(), new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
+		CanteenOrder dueOrder = new CanteenOrder(studentOne, stall, new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
 		assignOrderId(dueOrder, UUID.fromString("55555555-5555-5555-5555-555555555555"));
 		dueOrder.addItem(new OrderItem(dueOrder, menuItem, 1, new BigDecimal("45.00")));
 		orderReady(dueOrder);
 
-		CanteenOrder notDueOrder = new CanteenOrder(studentTwo, stall.getId(), new BigDecimal("90.00"), LocalDateTime.of(2026, 5, 30, 9, 10), 2);
+		CanteenOrder notDueOrder = new CanteenOrder(studentTwo, stall, new BigDecimal("90.00"), LocalDateTime.of(2026, 5, 30, 9, 10), 2);
 		assignOrderId(notDueOrder, UUID.fromString("66666666-6666-6666-6666-666666666666"));
 		notDueOrder.addItem(new OrderItem(notDueOrder, menuItem, 2, new BigDecimal("90.00")));
 		orderReady(notDueOrder);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertCircle, Loader2 } from 'lucide-react';
-import { getMyOrders, subscribeToOrderUpdates } from '../../api/endpoints';
+import { Clock, AlertCircle, Loader2, History, Sparkles, Trash2 } from 'lucide-react';
+import { getMyOrders, subscribeToOrderUpdates, cancelOrder } from '../../api/endpoints';
 import StatusBadge from '../../components/shared/StatusBadge';
 import { formatDateTime, getTimeRemaining } from '../../utils/dateFormatter';
 import { formatCurrency } from '../../utils/currencyFormatter';
@@ -12,6 +12,9 @@ const OrderHistoryPage = () => {
   const [pastOrders, setPastOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cancelingOrderId, setCancelingOrderId] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedCancelOrderId, setSelectedCancelOrderId] = useState(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -31,10 +34,8 @@ const OrderHistoryPage = () => {
 
     fetchOrders();
 
-    // Subscribe to SSE updates
     const eventSource = subscribeToOrderUpdates(
       (notification) => {
-        // Update active orders with new status
         setActiveOrders((prevOrders) =>
           prevOrders.map((order) =>
             order.id === notification.orderId
@@ -44,55 +45,76 @@ const OrderHistoryPage = () => {
         );
         toast.info(notification.message || `Order ${notification.orderId} updated`);
       },
-      (error) => {
-        console.error('SSE error:', error);
+      (sseError) => {
+        console.error('SSE error:', sseError);
       }
     );
 
     return () => eventSource.close();
   }, []);
 
+  const handleCancelOrder = async (orderId) => {
+    try {
+      setCancelingOrderId(orderId);
+      await cancelOrder(orderId);
+      setActiveOrders((prev) => prev.filter((o) => o.id !== orderId));
+      toast.success('Order cancelled successfully');
+      setShowCancelModal(false);
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Failed to cancel order';
+      toast.error(errorMessage);
+    } finally {
+      setCancelingOrderId(null);
+      setSelectedCancelOrderId(null);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
 
-  const OrderCard = ({ order, isActive }) => (
-    <div className="card mb-4">
-      <div className="flex justify-between items-start mb-4">
+  const OrderCard = ({ order, isActive, dailyOrderIndex }) => (
+    <div className="rounded-[24px] border border-white/70 bg-white/85 p-5 shadow-[0_14px_40px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Order #{order.queueNumber}
-          </h3>
-          <p className="text-sm text-gray-500">ID: {order.id}</p>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <History size={14} />
+            {isActive ? 'Active' : 'Past'}
+          </div>
+          <h3 className="text-lg font-semibold text-slate-950">Order #{dailyOrderIndex}</h3>
+          <p className="text-sm text-slate-500">ID: {order.id}</p>
+          {order.stallName && (
+            <p className="mt-1 text-sm font-medium text-slate-700">📍 {order.stallName}</p>
+          )}
         </div>
         <StatusBadge status={order.status} />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <p className="text-sm text-gray-600">Pickup Time</p>
-          <p className="font-semibold flex items-center gap-2">
+      <div className="mb-4 grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl bg-blue-50 p-4">
+          <p className="text-sm text-slate-600">Pickup Time</p>
+          <p className="mt-1 flex items-center gap-2 font-semibold text-slate-950">
             <Clock size={16} /> {formatDateTime(order.pickupSlot)}
           </p>
           {isActive && (
-            <p className="text-xs text-blue-600 mt-1">
+            <p className="mt-1 text-xs font-semibold text-blue-700">
               {getTimeRemaining(order.pickupSlot)}
             </p>
           )}
         </div>
-        <div>
-          <p className="text-sm text-gray-600">Total Amount</p>
-          <p className="text-xl font-bold text-blue-600">
+        <div className="rounded-2xl bg-emerald-50 p-4">
+          <p className="text-sm text-slate-600">Total Amount</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-700">
             {formatCurrency(order.totalPrice)}
           </p>
         </div>
       </div>
 
-      <div className="border-t pt-4">
-        <h4 className="font-semibold text-gray-900 mb-2">Items</h4>
-        <div className="space-y-1 text-sm">
+      <div className="border-t border-slate-200 pt-4">
+        <h4 className="mb-2 font-semibold text-slate-950">Items</h4>
+        <div className="space-y-2 text-sm">
           {order.items?.map((item, idx) => (
-            <div key={idx} className="flex justify-between text-gray-700">
+            <div key={idx} className="flex justify-between rounded-xl bg-slate-50 px-3 py-2 text-slate-700">
               <span>
                 {item.itemName} x {item.quantity}
               </span>
@@ -101,52 +123,120 @@ const OrderHistoryPage = () => {
           ))}
         </div>
       </div>
+
+      {isActive && order.status === 'PENDING' && (
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={() => {
+              setSelectedCancelOrderId(order.id);
+              setShowCancelModal(true);
+            }}
+            className="flex items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={cancelingOrderId === order.id}
+          >
+            <Trash2 size={16} />
+            {cancelingOrderId === order.id ? 'Cancelling...' : 'Cancel Order'}
+          </button>
+        </div>
+      )}
     </div>
   );
 
   return (
-    <div className="container-custom py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+    <div
+      className="min-h-screen py-8"
+      style={{
+        background:
+          'radial-gradient(circle at top left, rgba(245,158,11,0.10), transparent 22%), radial-gradient(circle at top right, rgba(14,165,233,0.10), transparent 25%), linear-gradient(180deg, #fffdf8 0%, #f4f8ff 100%)',
+      }}
+    >
+      <div className="container-custom">
+        <div className="mb-8 rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">
+            <Sparkles size={14} />
+            Order Timeline
+          </p>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">My orders</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
+            Track active orders, review pickup times, and look back at your recent canteen history.
+          </p>
+        </div>
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-          <p className="text-red-700">{error}</p>
+        {error && (
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
+
+        <div className="mb-8">
+          <h2 className="mb-4 text-2xl font-semibold text-slate-950">Active orders</h2>
+          {activeOrders.length === 0 ? (
+            <div className="rounded-[24px] border border-dashed border-slate-300 bg-white/70 py-10 text-center text-slate-500">
+              <Loader2 size={32} className="mx-auto mb-2 opacity-50" />
+              No active orders
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {activeOrders.map((order, index) => (
+                <OrderCard key={order.id} order={order} isActive={true} dailyOrderIndex={index + 1} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="mb-4 text-2xl font-semibold text-slate-950">Order history</h2>
+          {pastOrders.length === 0 ? (
+            <div className="rounded-[24px] border border-dashed border-slate-300 bg-white/70 py-10 text-center text-slate-500">
+              No past orders
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {pastOrders.map((order, index) => {
+                const orderDate = new Date(order.createdAt).toLocaleDateString();
+                const todayDate = new Date().toLocaleDateString();
+                const isDailyReset = orderDate === todayDate;
+                return (
+                  <OrderCard key={order.id} order={order} isActive={false} dailyOrderIndex={index + 1} />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="rounded-[24px] border border-white/70 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.3)]">
+            <div className="p-6">
+              <h2 className="mb-2 text-xl font-bold text-slate-950">Cancel Order?</h2>
+              <p className="mb-6 text-slate-600">
+                Are you sure you want to cancel this order? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setSelectedCancelOrderId(null);
+                  }}
+                  className="flex-1 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Keep Order
+                </button>
+                <button
+                  onClick={() => handleCancelOrder(selectedCancelOrderId)}
+                  disabled={cancelingOrderId !== null}
+                  className="flex-1 rounded-lg bg-red-500 px-4 py-2 font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {cancelingOrderId ? 'Cancelling...' : 'Cancel Order'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-
-      {/* Active Orders */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-          Active Orders
-        </h2>
-        {activeOrders.length === 0 ? (
-          <div className="card text-center py-8 text-gray-500">
-            <Loader2 size={32} className="mx-auto mb-2 opacity-50" />
-            No active orders
-          </div>
-        ) : (
-          activeOrders.map((order) => (
-            <OrderCard key={order.id} order={order} isActive={true} />
-          ))
-        )}
-      </div>
-
-      {/* Past Orders */}
-      <div>
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-          Order History
-        </h2>
-        {pastOrders.length === 0 ? (
-          <div className="card text-center py-8 text-gray-500">
-            No past orders
-          </div>
-        ) : (
-          pastOrders.map((order) => (
-            <OrderCard key={order.id} order={order} isActive={false} />
-          ))
-        )}
-      </div>
     </div>
   );
 };

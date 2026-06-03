@@ -24,9 +24,10 @@ if (!isUsingMockAuth && hasValidFirebaseConfig) {
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
 
-    if (import.meta.env.DEV) {
-      connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-    }
+    // Emulator disabled - using real Firebase instead
+    // if (import.meta.env.DEV) {
+    //   connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+    // }
   } catch (error) {
     console.warn('Firebase initialization failed, falling back to mock auth:', error.message);
     auth = mockAuth;

@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import com.is_this_aura_clan.CanteenQ.account.UserAccount;
+import com.is_this_aura_clan.CanteenQ.account.UserRole;
 import com.is_this_aura_clan.CanteenQ.account.UserAccountSyncService;
 
 class AuthControllerTest {
@@ -26,6 +28,9 @@ class AuthControllerTest {
 				"Firebase token accepted"
 			)
 		);
+		when(syncService.sync(new FirebaseAuthenticationPrincipal("uid-1", "student@school.edu"))).thenReturn(
+			new UserAccount("Demo Staff", null, "student@school.edu", "uid-1", UserRole.STAFF)
+		);
 
 		MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(service, syncService))
 			.setControllerAdvice(new AuthExceptionHandler())
@@ -36,7 +41,8 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.authenticated").value(true))
 			.andExpect(jsonPath("$.principal.uid").value("uid-1"))
 			.andExpect(jsonPath("$.principal.email").value("student@school.edu"))
-			.andExpect(jsonPath("$.message").value("Firebase token accepted"));
+			.andExpect(jsonPath("$.message").value("Firebase token accepted"))
+			.andExpect(jsonPath("$.role").value("STAFF"));
 
 		verify(syncService).sync(new FirebaseAuthenticationPrincipal("uid-1", "student@school.edu"));
 	}

@@ -39,13 +39,13 @@ class StaffOrderQueueServiceTest {
 		assignUserId(student, UUID.fromString("22222222-2222-2222-2222-222222222222"));
 		MenuItem menuItem = new MenuItem(stall, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", true);
 		assignMenuItemId(menuItem, UUID.fromString("33333333-3333-3333-3333-333333333333"));
-		CanteenOrder order = new CanteenOrder(student, stall.getId(), new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
+		CanteenOrder order = new CanteenOrder(student, stall, new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
 		assignOrderId(order, UUID.fromString("44444444-4444-4444-4444-444444444444"));
 		order.addItem(new OrderItem(order, menuItem, 1, new BigDecimal("45.00")));
 
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), any())).thenReturn(student);
 		when(stallRepository.existsById(stall.getId())).thenReturn(true);
-		when(orderRepository.findByStallIdAndStatusInOrderByPickupSlotAscQueueNumberAsc(stall.getId(), List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY)))
+		when(orderRepository.findByStall_IdAndStatusInOrderByPickupSlotAscQueueNumberAsc(stall.getId(), List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY)))
 			.thenReturn(List.of(order));
 
 		StaffOrderQueueService service = new StaffOrderQueueService(authorizationService, stallRepository, orderRepository, staffOrderResponseMapper);
@@ -90,7 +90,7 @@ class StaffOrderQueueServiceTest {
 		assignUserId(student, UUID.fromString("22222222-2222-2222-2222-222222222222"));
 		MenuItem menuItem = new MenuItem(stall, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", true);
 		assignMenuItemId(menuItem, UUID.fromString("33333333-3333-3333-3333-333333333333"));
-		CanteenOrder order = new CanteenOrder(student, stall.getId(), new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
+		CanteenOrder order = new CanteenOrder(student, stall, new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
 		assignOrderId(order, UUID.fromString("44444444-4444-4444-4444-444444444444"));
 		order.updateStatus(OrderStatus.PREPARING);
 		order.updateStatus(OrderStatus.READY);
@@ -99,7 +99,7 @@ class StaffOrderQueueServiceTest {
 
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), any())).thenReturn(student);
 		when(stallRepository.existsById(stall.getId())).thenReturn(true);
-		when(orderRepository.findByStallIdAndPickupSlotBetweenAndStatusInOrderByPickupSlotAscQueueNumberAsc(
+		when(orderRepository.findByStall_IdAndPickupSlotBetweenAndStatusInOrderByPickupSlotAscQueueNumberAsc(
 			stall.getId(),
 			LocalDate.of(2026, 5, 30).atStartOfDay(),
 			LocalDate.of(2026, 5, 30).atTime(java.time.LocalTime.MAX),

@@ -10,9 +10,9 @@ import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface OrderRepository extends JpaRepository<CanteenOrder, UUID> {
 
-	boolean existsByStudent_IdAndStallIdAndStatusIn(UUID studentId, UUID stallId, java.util.Collection<OrderStatus> statuses);
+	boolean existsByStudent_IdAndStall_IdAndStatusIn(UUID studentId, UUID stallId, java.util.Collection<OrderStatus> statuses);
 
-	long countByStallIdAndPickupSlotBetween(UUID stallId, LocalDateTime start, LocalDateTime end);
+	long countByStall_IdAndPickupSlotBetween(UUID stallId, LocalDateTime start, LocalDateTime end);
 
 	long countByStatus(OrderStatus status);
 
@@ -20,9 +20,9 @@ public interface OrderRepository extends JpaRepository<CanteenOrder, UUID> {
 
 	long countByStatusAndUpdatedAtBetween(OrderStatus status, LocalDateTime start, LocalDateTime end);
 
-	long countByStallIdAndStatusIn(UUID stallId, java.util.Collection<OrderStatus> statuses);
+	long countByStall_IdAndStatusIn(UUID stallId, java.util.Collection<OrderStatus> statuses);
 
-	long countByStallIdAndPickupSlotBetweenAndStatusIn(
+	long countByStall_IdAndPickupSlotBetweenAndStatusIn(
 		UUID stallId,
 		LocalDateTime start,
 		LocalDateTime end,
@@ -31,7 +31,7 @@ public interface OrderRepository extends JpaRepository<CanteenOrder, UUID> {
 
 	List<CanteenOrder> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
-	Optional<CanteenOrder> findTopByStallIdAndPickupSlotBetweenOrderByQueueNumberDesc(UUID stallId, LocalDateTime start, LocalDateTime end);
+	Optional<CanteenOrder> findTopByStall_IdAndPickupSlotBetweenOrderByQueueNumberDesc(UUID stallId, LocalDateTime start, LocalDateTime end);
 
 	@EntityGraph(attributePaths = {"items", "items.menuItem"})
 	List<CanteenOrder> findByStudent_IdOrderByCreatedAtDesc(UUID studentId);
@@ -46,7 +46,7 @@ public interface OrderRepository extends JpaRepository<CanteenOrder, UUID> {
 	List<CanteenOrder> findByStatusAndPickupSlotLessThanEqualOrderByPickupSlotAscQueueNumberAsc(OrderStatus status, LocalDateTime pickupSlot);
 
 	@EntityGraph(attributePaths = {"items", "items.menuItem", "student"})
-	List<CanteenOrder> findByStallIdAndPickupSlotBetweenAndStatusInOrderByPickupSlotAscQueueNumberAsc(
+	List<CanteenOrder> findByStall_IdAndPickupSlotBetweenAndStatusInOrderByPickupSlotAscQueueNumberAsc(
 		UUID stallId,
 		LocalDateTime start,
 		LocalDateTime end,
@@ -54,5 +54,5 @@ public interface OrderRepository extends JpaRepository<CanteenOrder, UUID> {
 	);
 
 	@EntityGraph(attributePaths = {"items", "items.menuItem", "student"})
-	List<CanteenOrder> findByStallIdAndStatusInOrderByPickupSlotAscQueueNumberAsc(UUID stallId, java.util.Collection<OrderStatus> statuses);
+	List<CanteenOrder> findByStall_IdAndStatusInOrderByPickupSlotAscQueueNumberAsc(UUID stallId, java.util.Collection<OrderStatus> statuses);
 }

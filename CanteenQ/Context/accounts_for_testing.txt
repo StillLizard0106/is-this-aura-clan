@@ -1,0 +1,11 @@
+student email:
+vince@students.nu-laguna.edu.ph
+123456
+
+staff email:
+staff@canteen.local
+staffs
+
+admin email:
+admin@canteen.local
+admins

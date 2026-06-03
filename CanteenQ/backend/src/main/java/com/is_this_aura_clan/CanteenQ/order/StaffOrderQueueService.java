@@ -53,17 +53,24 @@ public class StaffOrderQueueService {
 			throw new com.is_this_aura_clan.CanteenQ.catalog.StallNotFoundException("No stall found for id " + stallId);
 		}
 
+		// If the caller didn't specify statuses, default to showing only active orders
+		// (PENDING, PREPARING, READY). This prevents the queue from being cluttered with
+		// completed or cancelled orders by default.
 		List<OrderStatus> statuses = requestedStatuses == null || requestedStatuses.isEmpty()
 			? ACTIVE_STATUSES
-			: List.copyOf(requestedStatuses);
+			: List.copyOf(requestedStatuses); // defensive copy: the caller's list may be mutable
 
 		List<CanteenOrder> orders;
 		if (date == null) {
-			orders = orderRepository.findByStallIdAndStatusInOrderByPickupSlotAscQueueNumberAsc(stallId, statuses);
+			// No date filter: return all active orders for this stall across any day.
+    		// Used by the live queue view.
+			orders = orderRepository.findByStall_IdAndStatusInOrderByPickupSlotAscQueueNumberAsc(stallId, statuses);
 		} else {
+			// Date filter: scope results to a single calendar day.
+    		// Used when staff review a specific day's queue (e.g. checking tomorrow).
 			LocalDateTime start = date.atStartOfDay();
 			LocalDateTime end = date.atTime(LocalTime.MAX);
-			orders = orderRepository.findByStallIdAndPickupSlotBetweenAndStatusInOrderByPickupSlotAscQueueNumberAsc(stallId, start, end, statuses);
+			orders = orderRepository.findByStall_IdAndPickupSlotBetweenAndStatusInOrderByPickupSlotAscQueueNumberAsc(stallId, start, end, statuses);
 		}
 
 		return new StaffOrderQueueResponse(

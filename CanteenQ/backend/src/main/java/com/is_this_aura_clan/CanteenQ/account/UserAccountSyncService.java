@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.is_this_aura_clan.CanteenQ.auth.FirebaseAuthenticationPrincipal;
 import com.is_this_aura_clan.CanteenQ.auth.InvalidFirebaseAuthorizationException;
+import com.is_this_aura_clan.CanteenQ.auth.FirebaseAdminProperties;
 
 @Service
 public class UserAccountSyncService {
@@ -17,11 +18,20 @@ public class UserAccountSyncService {
 		"staff@canteen.local",
 		"staff@canteenq.local"
 	);
+	private static final String DEMO_ADMIN_EMAIL = "admin@canteen.local";
+	private static final String ADMIN_EMAIL_PREFIX = "admin@";
+	private static final String STAFF_EMAIL_PREFIX = "staff@";
 
 	private final UserAccountRepository userAccountRepository;
+	private FirebaseAdminProperties firebaseAdminProperties;
 
 	public UserAccountSyncService(UserAccountRepository userAccountRepository) {
 		this.userAccountRepository = userAccountRepository;
+	}
+
+	@org.springframework.beans.factory.annotation.Autowired(required = false)
+	public void setFirebaseAdminProperties(FirebaseAdminProperties firebaseAdminProperties) {
+		this.firebaseAdminProperties = firebaseAdminProperties;
 	}
 
 	@Transactional
@@ -33,7 +43,28 @@ public class UserAccountSyncService {
 			.map(existing -> updateExistingUser(existing, firebaseUid, email))
 			.orElseGet(() -> createNewUser(firebaseUid, email));
 
+		// Enforce allowed student email domain if configured
+		enforceAllowedEmailDomain(userAccount, email);
+
 		return userAccountRepository.save(userAccount);
+	}
+
+	private void enforceAllowedEmailDomain(UserAccount userAccount, String email) {
+		if (firebaseAdminProperties == null) {
+			return;
+		}
+		String allowed = firebaseAdminProperties.getAllowedEmailDomain();
+		if (allowed == null || allowed.isBlank()) {
+			return;
+		}
+
+		// Only enforce for STUDENT accounts
+		if (userAccount.getRole() == UserRole.STUDENT) {
+			String domain = email.contains("@") ? email.substring(email.indexOf('@') + 1).toLowerCase() : "";
+			if (!allowed.trim().toLowerCase().equals(domain)) {
+				throw new InvalidFirebaseAuthorizationException("Email domain not allowed: " + domain);
+			}
+		}
 	}
 
 	private Optional<UserAccount> findExistingUser(String firebaseUid, String email) {
@@ -44,14 +75,16 @@ public class UserAccountSyncService {
 	private UserAccount updateExistingUser(UserAccount userAccount, String firebaseUid, String email) {
 		userAccount.updateProfile(deriveDisplayName(email), userAccount.getStudentId(), email);
 		userAccount.linkFirebaseAccount(firebaseUid);
-		if (isDemoStaffEmail(email)) {
+		if (isDemoAdminEmail(email)) {
+			userAccount.changeRole(UserRole.ADMIN);
+		} else if (isDemoStaffEmail(email)) {
 			userAccount.changeRole(UserRole.STAFF);
 		}
 		return userAccount;
 	}
 
 	private UserAccount createNewUser(String firebaseUid, String email) {
-		UserRole role = isDemoStaffEmail(email) ? UserRole.STAFF : UserRole.STUDENT;
+		UserRole role = isDemoAdminEmail(email) ? UserRole.ADMIN : isDemoStaffEmail(email) ? UserRole.STAFF : UserRole.STUDENT;
 		return new UserAccount(deriveDisplayName(email), null, email, firebaseUid, role);
 	}
 
@@ -87,6 +120,12 @@ public class UserAccountSyncService {
 	}
 
 	private boolean isDemoStaffEmail(String email) {
-		return DEMO_STAFF_EMAILS.contains(email.trim().toLowerCase(Locale.ROOT));
+		String normalized = String.valueOf(email).trim().toLowerCase(Locale.ROOT);
+		return DEMO_STAFF_EMAILS.contains(normalized) || normalized.startsWith(STAFF_EMAIL_PREFIX);
+	}
+
+	private boolean isDemoAdminEmail(String email) {
+		String normalized = String.valueOf(email).trim().toLowerCase(Locale.ROOT);
+		return DEMO_ADMIN_EMAIL.equals(normalized) || normalized.startsWith(ADMIN_EMAIL_PREFIX);
 	}
 }

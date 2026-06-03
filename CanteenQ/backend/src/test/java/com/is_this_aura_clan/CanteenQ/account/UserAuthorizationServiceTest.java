@@ -32,6 +32,23 @@ class UserAuthorizationServiceTest {
 	}
 
 	@Test
+	void requireRoleTreatsAdminAsCompatibleWithStaffAccess() {
+		UserAccountRepository repository = mock(UserAccountRepository.class);
+		UserAccount adminAccount = new UserAccount("Admin User", null, "admin@school.edu", "uid-admin", UserRole.ADMIN);
+		when(repository.findByFirebaseUid("uid-admin")).thenReturn(Optional.of(adminAccount));
+
+		UserAuthorizationService service = new UserAuthorizationService(repository);
+
+		UserAccount resolved = service.requireRole(
+			new FirebaseAuthenticationPrincipal("uid-admin", "admin@school.edu"),
+			UserRole.STAFF
+		);
+
+		assertEquals(UserRole.ADMIN, resolved.getRole());
+		assertEquals("admin@school.edu", resolved.getEmail());
+	}
+
+	@Test
 	void requireRoleRejectsStudentWhenStaffRoleIsRequired() {
 		UserAccountRepository repository = mock(UserAccountRepository.class);
 		UserAccount studentAccount = new UserAccount("Student User", null, "student@school.edu", "uid-student", UserRole.STUDENT);

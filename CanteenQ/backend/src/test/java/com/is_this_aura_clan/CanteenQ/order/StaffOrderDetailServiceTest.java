@@ -35,7 +35,7 @@ class StaffOrderDetailServiceTest {
 		assignStallId(stall, UUID.fromString("22222222-2222-2222-2222-222222222222"));
 		MenuItem menuItem = new MenuItem(stall, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", true);
 		assignMenuItemId(menuItem, UUID.fromString("33333333-3333-3333-3333-333333333333"));
-		CanteenOrder order = new CanteenOrder(student, stall.getId(), new BigDecimal("45.00"), java.time.LocalDateTime.of(2026, 5, 30, 8, 20), 1);
+		CanteenOrder order = new CanteenOrder(student, stall, new BigDecimal("45.00"), java.time.LocalDateTime.of(2026, 5, 30, 8, 20), 1);
 		assignOrderId(order, UUID.fromString("44444444-4444-4444-4444-444444444444"));
 		order.addItem(new OrderItem(order, menuItem, 1, new BigDecimal("45.00")));
 

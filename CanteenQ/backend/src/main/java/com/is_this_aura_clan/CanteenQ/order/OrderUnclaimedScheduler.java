@@ -32,6 +32,8 @@ public class OrderUnclaimedScheduler {
 	@Transactional
 	public void markExpiredOrdersAsUnclaimed() {
 		LocalDateTime now = LocalDateTime.now(clock);
+		// Orders whose pickup slot was more than 15 minutes ago are past the grace period.
+    	// This mirrors the check in CanteenOrder.markUnclaimed(), keeping both consistent.
 		LocalDateTime cutoff = now.minusMinutes(15);
 		List<CanteenOrder> expiredOrders = orderRepository.findByStatusAndPickupSlotLessThanEqualOrderByPickupSlotAscQueueNumberAsc(OrderStatus.READY, cutoff);
 		if (expiredOrders.isEmpty()) {
@@ -48,6 +50,10 @@ public class OrderUnclaimedScheduler {
 				null
 			);
 		});
+		// Save all updates in a single batch before sending any notifications.
+		// This keeps the transaction clean: notifications go out after commit
+		// via publishStudentOrderUpdateAfterCommit(), so they fire only if
+		// the database write actually succeeded.
 		orderRepository.saveAll(expiredOrders);
 		expiredOrders.forEach(order ->
 			orderNotificationService.publishStudentOrderUpdateAfterCommit(

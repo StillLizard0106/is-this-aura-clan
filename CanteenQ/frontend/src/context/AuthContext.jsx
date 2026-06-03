@@ -4,11 +4,49 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  updateProfile,
 } from 'firebase/auth';
 import { authService, isUsingMock } from '../api/firebaseConfig';
 import { verifyToken } from '../api/endpoints';
 
 export const AuthContext = createContext();
+
+const getFriendlyAuthError = (error) => {
+    // Axios network error (no response)
+    if (error?.isAxiosError && !error.response) {
+      return 'Network error: Unable to reach authentication server. Please try again later.';
+    }
+  if (!error) {
+    return 'An unexpected authentication error occurred.';
+  }
+
+  const code = error.code || error?.response?.data?.code || '';
+  const messageText = (error.message || error?.response?.data?.message || '').toString();
+  const combined = `${code} ${messageText}`.toLowerCase();
+
+  if (combined.includes('invalid_authorization') || combined.includes('invalid-authorization')) {
+    return error.response?.data?.message || 'Your login is not authorized. Please use a valid student email domain.';
+  }
+
+  // Check common Firebase JS SDK codes and also textual forms like
+  // "Firebase: Error (auth/invalid-credential)." which appear in message.
+  if (
+    combined.includes('auth/invalid-credential') ||
+    combined.includes('invalid-credential') ||
+    combined.includes('auth/wrong-password') ||
+    combined.includes('wrong-password') ||
+    combined.includes('auth/user-not-found') ||
+    combined.includes('user-not-found')
+  ) {
+    return 'The Email or Password is incorrect! Try Again!';
+  }
+
+  if (combined.includes('auth/invalid-email') || combined.includes('invalid-email')) {
+    return 'Please enter a valid email address.';
+  }
+
+  return error.response?.data?.message || error.message || String(error);
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -48,7 +86,7 @@ export const AuthProvider = ({ children }) => {
             }
           } catch (err) {
             console.error('Auth state change error:', err);
-            setError(err.message);
+            setError(getFriendlyAuthError(err));
           } finally {
             setLoading(false);
           }
@@ -59,9 +97,9 @@ export const AuthProvider = ({ children }) => {
           try {
             if (firebaseUser) {
               const token = await firebaseUser.getIdToken();
-              localStorage.setItem('firebaseToken', token);
-
               const response = await verifyToken(token);
+
+              localStorage.setItem('firebaseToken', token);
               setUser({
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
@@ -75,7 +113,17 @@ export const AuthProvider = ({ children }) => {
             }
           } catch (err) {
             console.error('Auth state change error:', err);
-            setError(err.message);
+            setError(getFriendlyAuthError(err));
+            if (firebaseUser) {
+              try {
+                await signOut(authService);
+              } catch (signOutError) {
+                console.warn('Failed to sign out invalid user:', signOutError);
+              }
+              setUser(null);
+              setUserRole(null);
+              localStorage.removeItem('firebaseToken');
+            }
           } finally {
             setLoading(false);
           }
@@ -103,21 +151,27 @@ export const AuthProvider = ({ children }) => {
       const token = isUsingMock
         ? await authService.getIdToken()
         : await user.getIdToken();
-      localStorage.setItem('firebaseToken', token);
 
-      let role = 'STUDENT';
       try {
         const response = await verifyToken(token);
-        role = response.data.role || 'STUDENT';
+        const role = response.data.role || 'STUDENT';
         setUserRole(role);
+        localStorage.setItem('firebaseToken', token);
+        return { user, role };
       } catch (err) {
-        setUserRole(role);
+        if (!isUsingMock) {
+          try {
+            await signOut(authService);
+          } catch (signOutError) {
+            console.warn('Failed to sign out after auth verification failure:', signOutError);
+          }
+        }
+        throw err;
       }
-
-      return { user, role };
     } catch (err) {
-      setError(err.message);
-      throw err;
+      const message = getFriendlyAuthError(err);
+      setError(message);
+      throw new Error(message);
     }
   };
 
@@ -131,26 +185,34 @@ export const AuthProvider = ({ children }) => {
         const result = await createUserWithEmailAndPassword(authService, email, password);
         user = result.user;
         if (displayName) {
-          await user.updateProfile({ displayName });
+          await updateProfile(user, { displayName });
         }
       }
 
       const token = isUsingMock
         ? await authService.getIdToken()
         : await user.getIdToken();
-      localStorage.setItem('firebaseToken', token);
 
       try {
         const response = await verifyToken(token);
-        setUserRole(response.data.role || 'STUDENT');
+        const role = response.data.role || 'STUDENT';
+        setUserRole(role);
+        localStorage.setItem('firebaseToken', token);
+        return user;
       } catch (err) {
-        setUserRole('STUDENT');
+        if (!isUsingMock) {
+          try {
+            await signOut(authService);
+          } catch (signOutError) {
+            console.warn('Failed to sign out after auth verification failure:', signOutError);
+          }
+        }
+        throw err;
       }
-
-      return user;
     } catch (err) {
-      setError(err.message);
-      throw err;
+      const message = getFriendlyAuthError(err);
+      setError(message);
+      throw new Error(message);
     }
   };
 
@@ -166,7 +228,8 @@ export const AuthProvider = ({ children }) => {
       setUserRole(null);
       localStorage.removeItem('firebaseToken');
     } catch (err) {
-      setError(err.message);
+      const message = getFriendlyAuthError(err);
+      setError(message);
       throw err;
     }
   };

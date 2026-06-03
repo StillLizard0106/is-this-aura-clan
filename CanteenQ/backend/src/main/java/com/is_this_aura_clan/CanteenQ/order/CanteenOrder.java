@@ -23,6 +23,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import com.is_this_aura_clan.CanteenQ.account.UserAccount;
+import com.is_this_aura_clan.CanteenQ.catalog.Stall;
 
 @Entity
 @Table(name = "orders")
@@ -36,8 +37,9 @@ public class CanteenOrder {
 	@JoinColumn(name = "student_id", nullable = false)
 	private UserAccount student;
 
-	@Column(name = "stall_id", nullable = false)
-	private UUID stallId;
+	@ManyToOne(optional = false, fetch = FetchType.LAZY)
+	@JoinColumn(name = "stall_id", nullable = false)
+	private Stall stall;
 
 	@Column(name = "total_price", nullable = false, precision = 10, scale = 2)
 	private BigDecimal totalPrice;
@@ -64,9 +66,9 @@ public class CanteenOrder {
 	protected CanteenOrder() {
 	}
 
-	public CanteenOrder(UserAccount student, UUID stallId, BigDecimal totalPrice, LocalDateTime pickupSlot, int queueNumber) {
+	public CanteenOrder(UserAccount student, Stall stall, BigDecimal totalPrice, LocalDateTime pickupSlot, int queueNumber) {
 		this.student = Objects.requireNonNull(student, "student must not be null");
-		this.stallId = Objects.requireNonNull(stallId, "stallId must not be null");
+		this.stall = Objects.requireNonNull(stall, "stall must not be null");
 		this.totalPrice = Objects.requireNonNull(totalPrice, "totalPrice must not be null");
 		this.pickupSlot = Objects.requireNonNull(pickupSlot, "pickupSlot must not be null");
 		this.queueNumber = queueNumber;
@@ -76,6 +78,11 @@ public class CanteenOrder {
 	@PrePersist
 	void prePersist() {
 		LocalDateTime now = LocalDateTime.now();
+		/**
+		 * Capture a single timestamp so createdAt and updatedAt are identical on insert.
+		 * createdAt is guarded against re-assignment because the column is marked updatable=false,
+		 * but we check anyway in case this method is ever called manually in tests.
+		 */
 		if (createdAt == null) {
 			createdAt = now;
 		}
@@ -100,7 +107,11 @@ public class CanteenOrder {
 	}
 
 	public UUID getStallId() {
-		return stallId;
+		return stall.getId();
+	}
+
+	public Stall getStall() {
+		return stall;
 	}
 
 	public BigDecimal getTotalPrice() {
@@ -135,6 +146,8 @@ public class CanteenOrder {
 		if (status != OrderStatus.PENDING) {
 			throw new OrderActionException("Only pending orders can be cancelled.");
 		}
+		// Students cannot cancel within 15 minutes of pickup — by that point
+    	// the stall has likely already started preparing the order.
 		if (now.isAfter(pickupSlot.minusMinutes(15))) {
 			throw new OrderActionException("Orders can only be cancelled at least 15 minutes before pickup.");
 		}
@@ -146,6 +159,9 @@ public class CanteenOrder {
 		if (status != OrderStatus.READY) {
 			throw new OrderActionException("Only ready orders can be marked as unclaimed.");
 		}
+		// Give students a 15-minute grace period after the pickup slot before
+    	// the order is considered abandoned. This matches the cancellation window
+    	// and the scheduler's cutoff in OrderUnclaimedScheduler.
 		if (now.isBefore(pickupSlot.plusMinutes(15))) {
 			throw new OrderActionException("Orders can only be marked unclaimed after the pickup grace period.");
 		}
@@ -157,6 +173,9 @@ public class CanteenOrder {
 	}
 
 	private boolean isValidTransition(OrderStatus currentStatus, OrderStatus nextStatus) {
+		// Only staff-driven forward transitions are handled here.
+    	// CANCELLED is set via cancel(), UNCLAIMED via markUnclaimed() —
+    	// both enforce their own preconditions and bypass this method.
 		return switch (currentStatus) {
 			case PENDING -> nextStatus == OrderStatus.PREPARING || nextStatus == OrderStatus.CANCELLED;
 			case PREPARING -> nextStatus == OrderStatus.READY;

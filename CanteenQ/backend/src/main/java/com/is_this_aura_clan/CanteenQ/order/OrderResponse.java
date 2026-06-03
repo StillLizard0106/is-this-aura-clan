@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record OrderResponse(
 	UUID id,
+	String stallName,
 	UUID stallId,
 	BigDecimal totalPrice,
 	LocalDateTime pickupSlot,

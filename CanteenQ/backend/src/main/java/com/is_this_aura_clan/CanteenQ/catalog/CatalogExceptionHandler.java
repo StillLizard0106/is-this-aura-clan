@@ -36,6 +36,12 @@ public class CatalogExceptionHandler {
 			.body(new ErrorResponse("MENU_ITEM_NOT_FOUND", exception.getMessage()));
 	}
 
+	@ExceptionHandler(MenuItemDeletionConflictException.class)
+	public ResponseEntity<ErrorResponse> handleMenuItemDeletionConflict(MenuItemDeletionConflictException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(new ErrorResponse("MENU_ITEM_DELETION_CONFLICT", exception.getMessage()));
+	}
+
 	@ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
 	public ResponseEntity<ErrorResponse> handleValidation(Exception exception) {
 		String message = "Validation failed";

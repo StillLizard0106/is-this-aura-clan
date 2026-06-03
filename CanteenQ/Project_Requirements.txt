@@ -1,0 +1,1051 @@
+# CanteenQ - Project Requirements Document
+
+> A digital pre-ordering system for school canteens and food stalls
+
+UPDATE: Project status: COMPLETED — Presentation delivered. Cloud deployment is planned as a future update.
+
+---
+
+# 0. MVP SCOPE (CRITICAL DECISION)
+
+### MVP Goal
+
+Deliver a working system where:
+
+* Students can register/login via Firebase (school email validated)
+* Students can browse food stalls and menus
+* Students can place orders with a 15-minute advance notice requirement
+* Students can only place pickup slots within 1 week of the current time and between 7:00 AM and 6:00 PM
+* Students can have **only 1 active order per stall** at a time
+* Automatic queue numbering by pickup slot and order time
+* Staff can view incoming orders in real-time queue
+* Staff can update order status (pending → preparing → ready → completed)
+* Orders expire and auto-marked UNCLAIMED if not picked up within 10 minutes of pickup slot
+* Student can cancel orders up to 15 minutes before pickup
+* Complete audit trail for all order transitions
+
+---
+
+# 1. DOMAIN MODEL (CORE ENTITIES)
+
+## 1.1 User / UserAccount
+
+```java
+UserAccount
+- id (UUID)
+- name (String)
+- student_id (VARCHAR, nullable)
+- email (VARCHAR, unique)
+- firebase_uid (VARCHAR, unique)
+- role (ENUM: STUDENT, STAFF)
+- created_at (TIMESTAMP)
+```
+
+### Rules
+
+* Email validated against school domain (handled at registration layer)
+* firebase_uid is the primary identifier from Firebase
+* STUDENT role for student accounts
+* STAFF role for canteen staff/vendors (admin-created only)
+
+---
+
+## 1.2 Stall
+
+```java
+Stall
+- id (UUID)
+- stall_name (VARCHAR)
+- vendor_name (VARCHAR)
+- operating_hours (VARCHAR)
+- queue_limit (INT, default 100)
+- created_at (TIMESTAMP)
+```
+
+### Rules
+
+* One stall can have many menu items
+* Staff can manage their assigned stall(s)
+* Each stall has a default queue limit of 100 orders
+
+---
+
+## 1.3 MenuItem
+
+```java
+MenuItem
+- id (UUID)
+- stall_id (UUID, FK → Stall)
+- item_name (VARCHAR)
+- description (TEXT)
+- price (DECIMAL)
+- category (VARCHAR)
+- is_available (BOOLEAN)
+- created_at (TIMESTAMP)
+```
+
+### Rules
+
+* Availability can be toggled by staff in real-time
+* Unavailable items cannot be ordered
+
+---
+
+## 1.4 Order / CanteenOrder
+
+```java
+CanteenOrder
+- id (UUID)
+- student_id (UUID, FK → UserAccount)
+- stall_id (UUID, FK → Stall)
+- total_price (DECIMAL)
+- pickup_slot (TIMESTAMP)
+- queue_number (INT)
+- status (ENUM: PENDING, PREPARING, READY, COMPLETED, CANCELLED, UNCLAIMED)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+```
+
+### Rules
+
+* One active order per student per stall
+* Each stall has a default active queue cap of 100 orders
+* Student UI shows queue usage and remaining slots
+* Queue number generated per stall per day (auto-increment)
+* Status transitions: PENDING → PREPARING → READY → COMPLETED/UNCLAIMED/CANCELLED
+* UNCLAIMED auto-set by scheduler if not picked up 10 minutes after pickup_slot
+
+---
+
+## 1.5 OrderItem
+
+```java
+OrderItem
+- id (UUID)
+- order_id (UUID, FK → CanteenOrder)
+- menu_item_id (UUID, FK → MenuItem)
+- quantity (INT)
+- subtotal (DECIMAL)
+```
+
+### Rules
+
+* Immutable once order is created
+* Links the menu item snapshot to the order
+
+---
+
+## 1.6 OrderAuditTrail
+
+```java
+OrderAuditTrail
+- id (UUID)
+- order_id (UUID, FK → CanteenOrder)
+- previous_status (ENUM)
+- new_status (ENUM)
+- changed_by (UUID, FK → UserAccount, nullable for system-initiated)
+- changed_at (TIMESTAMP)
+- reason (VARCHAR, nullable)
+```
+
+### Rules
+
+* All status changes logged (including system-initiated unclaimed transitions)
+* Immutable audit log for compliance
+
+---
+
+# 2. BACKEND ARCHITECTURE (SPRING BOOT)
+
+## 2.1 Layered Structure (STRICT)
+
+```
+auth/
+  - FirebaseAuthService
+  - FirebaseTokenVerifier
+  - FirebaseAdminConfiguration
+  - FirebaseAuthInterceptor
+  - UserAccountSyncService
+
+account/
+  - UserAccount (entity)
+  - UserRole (enum)
+  - UserAccountRepository
+  - UserAuthorizationService
+  - UserAccountSyncService
+
+catalog/
+  - Stall, MenuItem (entities)
+  - StallRepository, MenuItemRepository
+  - CatalogService (read-only)
+  - CatalogController (public browse)
+  - StaffStallController (CRUD for staff)
+  - StaffMenuItemController (CRUD for staff)
+
+order/
+  - CanteenOrder, OrderItem, OrderAuditTrail (entities)
+  - OrderService (placement logic)
+  - OrderCancellationService
+  - OrderDetailService
+  - OrderHistoryService
+  - StaffOrderQueueService
+  - StaffOrderStatusService
+  - OrderNotificationService (SSE)
+  - OrderUnclaimedScheduler (@Scheduled)
+  - OrderAuditTrailService
+
+secure/
+  - StaffDashboardService/Controller
+
+secure/report/
+  - StaffReportService/Controller (daily summaries)
+
+health/
+  - HealthController
+
+exception/
+  - Custom exceptions (OrderPlacementException, OrderConflictException, etc.)
+  - Global exception handlers
+```
+
+---
+
+## 2.2 Key Design Patterns
+
+* **Service Layer Pattern** → business logic isolation (OrderService, CatalogService)
+* **DTO Pattern** → prevent entity leakage (OrderResponse, StallResponse, etc.)
+* **Repository Pattern** → data access abstraction
+* **Scheduler Pattern** → order expiration (OrderUnclaimedScheduler)
+* **Observer Pattern (light)** → SSE notifications
+* **Interceptor Pattern** → Firebase auth enforcement (FirebaseAuthInterceptor)
+
+---
+
+# 3. API DESIGN (MVP)
+
+## 3.1 Auth APIs
+
+### POST /api/auth/verify
+
+Verify Firebase token and sync user to database.
+
+**Request:**
+```json
+{
+  "token": "firebase-id-token"
+}
+```
+
+**Response (on success):**
+```json
+{
+  "uid": "firebase-uid",
+  "email": "student@school.edu",
+  "message": "Token verified"
+}
+```
+
+### Rules:
+
+* Token validated against Firebase Admin SDK
+* User synced to `users` table if not exists
+* Role auto-assigned = STUDENT (for new registrations)
+
+---
+
+## 3.2 Catalog APIs
+
+### GET /api/stalls
+
+Returns all available stalls.
+
+```json
+[
+  {
+    "id": "uuid",
+    "stallName": "Pizza Stall",
+    "vendorName": "Tony's Pizzeria",
+    "operatingHours": "10:00 - 14:00",
+    "queueLimit": 100,
+    "queueSlotsLeft": 100
+  }
+]
+```
+
+---
+
+### GET /api/stalls/{stallId}/menu-items
+
+Returns all menu items for a stall (only available=true).
+
+```json
+[
+  {
+    "id": "uuid",
+    "itemName": "Pepperoni Pizza",
+    "description": "Classic pepperoni",
+    "price": 150.00,
+    "category": "Pizza",
+    "isAvailable": true
+  }
+]
+```
+
+---
+
+## 3.3 Order APIs (Student)
+
+### POST /api/orders
+
+Place a new order.
+
+**Request:**
+```json
+{
+  "stallId": "uuid",
+  "pickupSlot": "2026-05-31T12:30:00",
+  "items": [
+    { "menuItemId": "uuid", "quantity": 1 },
+    { "menuItemId": "uuid", "quantity": 2 }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "stallId": "uuid",
+  "totalPrice": 300.00,
+  "pickupSlot": "2026-05-31T12:30:00",
+  "queueNumber": 5,
+  "status": "PENDING",
+  "items": [...]
+}
+```
+
+### Rules:
+
+* Pickup slot must be **at least 15 minutes** in future
+* Pickup slot must be within **1 week** from now
+* Pickup slot must be between **7:00 AM and 6:00 PM**
+* Student must **NOT** have active order (PENDING, PREPARING, READY) for this stall
+* All menu items must be available
+* All prices must be present
+* 401 if not authenticated (interceptor checks)
+* Role validated = STUDENT only
+
+---
+
+### GET /api/orders
+
+Get student's active and recent orders.
+
+**Response:**
+```json
+{
+  "activeOrders": [...],
+  "history": [...]
+}
+```
+
+---
+
+### GET /api/orders/{orderId}
+
+Get single order details (student must be owner).
+
+---
+
+### DELETE /api/orders/{orderId}
+
+Cancel an order.
+
+### Rules:
+
+* Must be in PENDING or PREPARING status
+* Cancellation window: must be **at least 15 minutes before pickup slot**
+* Audit logged with reason = "STUDENT_CANCELLED"
+
+---
+
+### GET /api/orders/notifications
+
+SSE endpoint for order status updates.
+
+**Stream:**
+```json
+data: {"orderId": "uuid", "status": "READY", "message": "Your order is ready for pickup"}
+```
+
+---
+
+## 3.4 Staff APIs (Stall Queue)
+
+### GET /api/staff/orders
+
+Get orders for staff's stall(s) with optional filters.
+
+**Query Params:**
+- `status` (PENDING, PREPARING, READY, etc.)
+- `startDate`, `endDate` (date range filters)
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "studentName": "John Doe",
+    "queueNumber": 5,
+    "pickupSlot": "2026-05-31T12:30:00",
+    "status": "PENDING",
+    "items": [
+      { "itemName": "Pizza", "quantity": 1 }
+    ],
+    "totalPrice": 150.00
+  }
+]
+```
+
+### Rules:
+
+* 403 if not STAFF role
+* Only returns orders for staff's assigned stall(s)
+* Ordered by pickupSlot ASC, queueNumber ASC
+* Pending orders may be rejected by staff and moved to CANCELLED
+
+---
+
+### PATCH /api/staff/orders/{orderId}
+
+Update order status (staff action).
+
+**Request:**
+```json
+{
+  "status": "PREPARING"
+}
+```
+
+### Rules:
+
+* Valid transitions: PENDING → PREPARING → READY → COMPLETED
+* 403 if not STAFF
+* Audit logged with `changedBy` = authenticated staff user
+* SSE notification sent to student
+
+---
+
+### PATCH /api/staff/orders/{orderId}/unclaimed
+
+Mark order as unclaimed (grace period expired).
+
+### Rules:
+
+* Only staff-initiated action
+* Audit logged with `changedBy` = authenticated staff user
+
+---
+
+### GET /api/staff/orders/{orderId}
+
+Get detailed order view (staff can view any order from their stall).
+
+---
+
+### GET /api/staff/orders/{orderId}/audit
+
+View complete audit trail for an order.
+
+**Response:**
+```json
+[
+  {
+    "previousStatus": "PENDING",
+    "newStatus": "PREPARING",
+    "changedBy": "Staff Name",
+    "changedAt": "2026-05-31T12:10:00",
+    "reason": null
+  }
+]
+```
+
+---
+
+## 3.5 Staff Management APIs
+
+### GET /api/staff/dashboard
+
+Get staff dashboard overview (role guarded = STAFF only).
+
+**Response:**
+```json
+{
+  "message": "Staff dashboard access granted",
+  "name": "Staff Name",
+  "email": "staff@school.edu",
+  "role": "STAFF"
+}
+```
+
+---
+
+### POST /api/stalls (Staff CRUD)
+
+Create a new stall (admin/setup only).
+
+---
+
+### GET /api/stalls (Staff only)
+
+List all stalls (staff management view).
+
+---
+
+### PATCH /api/stalls/{stallId} (Staff)
+
+Update stall details.
+
+---
+
+### DELETE /api/stalls/{stallId} (Staff)
+
+Delete a stall.
+
+---
+
+### POST /api/stalls/{stallId}/menu-items (Staff)
+
+Create menu item for stall.
+
+---
+
+### PATCH /api/stalls/{stallId}/menu-items/{itemId} (Staff)
+
+Update menu item (including availability toggle).
+
+---
+
+### DELETE /api/stalls/{stallId}/menu-items/{itemId} (Staff)
+
+Delete menu item.
+
+---
+
+## 3.6 Reporting API
+
+### GET /api/staff/reporting/summary
+
+Get daily/date-range reporting summary.
+
+**Query Params:**
+- `startDate`, `endDate` (optional)
+
+**Response:**
+```json
+{
+  "totalOrders": 150,
+  "totalRevenue": 15000.00,
+  "ordersCompleted": 145,
+  "ordersUnclaimed": 5,
+  "stallBreakdown": [
+    {
+      "stallName": "Pizza Stall",
+      "totalOrders": 50,
+      "totalRevenue": 7500.00
+    }
+  ]
+}
+```
+
+### Rules:
+
+* 403 if not STAFF role
+
+---
+
+## 3.7 Health & Protected APIs
+
+### GET /api/health
+
+System health check (no auth required).
+
+**Response:**
+```json
+{
+  "status": "UP"
+}
+```
+
+---
+
+### GET /api/protected/profile
+
+Get authenticated user profile (auth required).
+
+**Response:**
+```json
+{
+  "uid": "firebase-uid",
+  "email": "student@school.edu",
+  "name": "Student Name"
+}
+```
+
+---
+
+# 4. BUSINESS LOGIC (CRITICAL RULES)
+
+## 4.1 Order Placement Rules
+
+* Student must be authenticated (STUDENT role)
+* One ACTIVE order per student per stall (active = PENDING, PREPARING, READY)
+* Pickup slot must be ≥ 15 minutes in future
+* Pickup slot must be within 1 week from now
+* Pickup slot must be between 7:00 AM and 6:00 PM
+* Each stall has a default active queue cap of 100 orders
+* All items must be available
+* Menu items must belong to the target stall
+* Queue number auto-generated per stall per day
+
+---
+
+## 4.2 Order Cancellation Rules
+
+* Only PENDING or PREPARING orders can be cancelled
+* Cancellation window: must be ≥ 15 minutes before pickup_slot
+* Audit trail recorded with reason = "STUDENT_CANCELLED"
+* After cancellation, student can place new order for same stall
+
+---
+
+## 4.3 Order Status Transitions (Staff)
+
+```
+PENDING → PREPARING → READY → COMPLETED
+              ↓
+           CANCELLED (student cancels)
+```
+
+* READY orders auto-transition to UNCLAIMED if not picked up 10 min after pickup_slot
+* Only staff can move orders through states
+* Each transition audited with changedBy, timestamp
+
+---
+
+## 4.4 Order Expiration Logic (VERY IMPORTANT)
+
+### Spring Scheduler
+
+```java
+@Scheduled(fixedDelayString = "${app.orders.unclaimed-check-delay-ms:60000}")
+```
+
+Runs every 60 seconds (configurable):
+
+1. Query all READY orders where `now > pickupSlot + 10 minutes`
+2. Set each to UNCLAIMED
+3. Audit trail recorded with `changedBy = null` (system-initiated)
+4. Send SSE notification to student
+
+---
+
+## 4.5 Student Notifications (SSE)
+
+* Student connects to `GET /api/orders/notifications` SSE stream
+* Staff updates order status → student receives real-time update
+* System auto-marks unclaimed → student receives notification
+
+---
+
+## 4.6 Queue Number Generation
+
+Per stall per day:
+
+```
+SELECT MAX(queue_number) 
+FROM orders 
+WHERE stall_id = ? AND DATE(pickup_slot) = TODAY
+```
+
+* Next queue number = MAX + 1 or 1 if no orders yet
+* Ensures unique queue numbers per pickup slot
+
+---
+
+# 5. SECURITY (MVP LEVEL)
+
+## 5.1 Firebase Authentication
+
+* Stateless token-based auth
+* Token verified via Firebase Admin SDK
+* User record synced to PostgreSQL after first login
+* Token contains uid + email (claims)
+
+---
+
+## 5.2 Role-Based Access Control
+
+```
+@PreAuthorize("hasRole('STAFF')")
+```
+
+* STUDENT role: can access /api/orders/*, /api/stalls (read), /api/orders/notifications
+* STAFF role: can access /api/staff/*, /api/stalls (CRUD for management)
+* Interceptor enforces auth on `/api/protected/**` and `/api/staff/**`
+
+---
+
+## 5.3 Email Validation
+
+* Email domain validated at registration layer (Firebase handles the flow)
+* Backend accepts any email from authenticated Firebase user
+* School domain enforcement at registration UI level
+
+---
+
+## 5.4 Order Ownership Verification
+
+* Student can only view/cancel their own orders
+* Staff can view orders for their assigned stall(s) only
+
+---
+
+# 6. DATABASE DESIGN (POSTGRESQL)
+
+## users
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | UUID | PRIMARY KEY |
+| name | VARCHAR | NOT NULL |
+| student_id | VARCHAR | UNIQUE, nullable |
+| email | VARCHAR | UNIQUE, NOT NULL |
+| firebase_uid | VARCHAR | UNIQUE, NOT NULL |
+| role | ENUM(STUDENT, STAFF) | NOT NULL |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+
+---
+
+## stalls
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | UUID | PRIMARY KEY |
+| stall_name | VARCHAR | NOT NULL |
+| vendor_name | VARCHAR | nullable |
+| operating_hours | VARCHAR | nullable |
+| queue_limit | INT | NOT NULL DEFAULT 100 |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+
+---
+
+## menu_items
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | UUID | PRIMARY KEY |
+| stall_id | UUID | FK → stalls, NOT NULL |
+| item_name | VARCHAR | NOT NULL |
+| description | TEXT | nullable |
+| price | DECIMAL(10,2) | NOT NULL |
+| category | VARCHAR | nullable |
+| is_available | BOOLEAN | DEFAULT TRUE |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+
+---
+
+## orders (CanteenOrder)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | UUID | PRIMARY KEY |
+| student_id | UUID | FK → users, NOT NULL |
+| stall_id | UUID | FK → stalls, NOT NULL |
+| total_price | DECIMAL(10,2) | NOT NULL |
+| pickup_slot | TIMESTAMP | NOT NULL |
+| queue_number | INT | NOT NULL |
+| status | ENUM(...) | NOT NULL, DEFAULT 'PENDING' |
+| created_at | TIMESTAMP | DEFAULT NOW() |
+| updated_at | TIMESTAMP | DEFAULT NOW() |
+
+---
+
+## order_items
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | UUID | PRIMARY KEY |
+| order_id | UUID | FK → orders, NOT NULL |
+| menu_item_id | UUID | FK → menu_items, NOT NULL |
+| quantity | INT | NOT NULL |
+| subtotal | DECIMAL(10,2) | NOT NULL |
+
+---
+
+## order_audit_trail
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | UUID | PRIMARY KEY |
+| order_id | UUID | FK → orders, NOT NULL |
+| previous_status | ENUM(...) | nullable |
+| new_status | ENUM(...) | NOT NULL |
+| changed_by | UUID | FK → users, nullable (system if null) |
+| changed_at | TIMESTAMP | DEFAULT NOW() |
+| reason | VARCHAR | nullable |
+
+---
+
+# 7. EDGE CASES (MUST HANDLE)
+
+## Order Placement
+
+* Student tries to place order for unavailable item → OrderPlacementException
+* Student already has active order for stall → OrderConflictException
+* Pickup slot < 15 minutes away → OrderPlacementException
+* Pickup slot beyond 1 week or outside 7:00 AM to 6:00 PM → OrderPlacementException
+* Menu item price is NULL → OrderPlacementException
+* Stall doesn't exist → OrderPlacementException
+
+---
+
+## Order Cancellation
+
+* Order already READY → cannot cancel (only within 15 min before pickup)
+* Cancellation window expired (< 15 min before pickup) → OrderActionException
+* Order not found or not owned by student → OrderNotFoundException
+
+---
+
+## Order Status Updates (Staff)
+
+* Invalid status transition → OrderStatusTransitionException
+* Order not found → OrderNotFoundException
+* User not STAFF role → InsufficientRoleException
+
+---
+
+## Expiration Scheduler
+
+* Multiple transitions prevented via `@Transactional`
+* Only READY orders marked UNCLAIMED
+* Audit log has `changedBy = null` for system transitions
+
+---
+
+## SSE Notifications
+
+* Student disconnects and reconnects → reconnect seamless (in-memory hub re-sends)
+* Multiple orders → separate events per order
+
+---
+
+# 8. TESTING (MVP LEVEL)
+
+## Unit Tests (120+ tests)
+
+* UserAccountSyncService (create/update user)
+* OrderService (placement validation rules)
+* OrderCancellationService (cancellation window checks)
+* StaffOrderStatusService (status transitions)
+* OrderUnclaimedScheduler (expiration logic)
+* CatalogService (menu item filtering)
+* OrderAuditTrailService (audit logging)
+* All exception handlers
+
+---
+
+## Integration Tests
+
+* Firebase auth interceptor + protected routes
+* Order placement → database persistence
+* Order status update → SSE publish
+* Scheduler marks expired orders
+
+---
+
+# 9. DEPLOYMENT & CONFIGURATION
+
+## Environment Variables
+
+```bash
+# Firebase Admin (optional but recommended)
+FIREBASE_ADMIN_ENABLED=true
+FIREBASE_ADMIN_CREDENTIALS_PATH=/path/to/service-account.json
+# OR
+FIREBASE_ADMIN_CREDENTIALS_JSON="<raw-json-or-base64>"
+
+# Database
+POSTGRES_URL=jdbc:postgresql://localhost:5432/canteenq
+POSTGRES_USERNAME=canteenq_user
+POSTGRES_PASSWORD=secure_password
+
+# Server
+SPRING_PROFILES_ACTIVE=postgres
+SERVER_PORT=8080
+
+# Scheduler
+APP_ORDERS_UNCLAIMED_CHECK_DELAY_MS=60000  # every 60 seconds
+```
+
+---
+
+## Profiles
+
+* **default (H2)**: In-memory database for local dev
+* **postgres**: PostgreSQL for staging/production
+
+---
+
+# 10. WHAT NOT TO BUILD (YET)
+
+Avoid for MVP:
+
+* **WebSockets** (SSE sufficient for notifications)
+* **Microservices** (monolith is fine)
+* **Redis caching** (database queries are fast enough)
+* **Online payment integration** (cash-only for MVP)
+* **QR code pickup verification** (manual list view)
+* **Push notifications / Email notifications** (in-app SSE only)
+* **Mobile app** (responsive web only)
+* **Loyalty/points system** (future enhancement)
+* **Analytics dashboard** (summary endpoint exists, UI later)
+* **Multi-language support** (English only)
+
+---
+
+# 11. MVP PRIORITY ORDER (BUILD THIS FIRST)
+
+## Phase 1: Core Backend (COMPLETED ✓)
+
+1. ✓ Firebase Admin configuration
+2. ✓ User auth + sync to DB
+3. ✓ Role system (STUDENT, STAFF)
+
+---
+
+## Recent Implementations (what's done)
+
+- ✅ Staff dashboard UI and backend endpoints: queue overview, revenue summary, and stall-specific views.
+- ✅ Menu item management: staff can create, edit, and delete menu items for their assigned stall.
+- ✅ PostgreSQL configured as the default persistent database; data persists across restarts when the Postgres profile is used.
+- ✅ Frontend UX fixes: smooth scrolling to menu editor and scroll-to-top on dashboard load.
+- ✅ Queue Overview section: Status count cards showing Pending/Preparing/Ready/Completed order counts
+- ✅ Staff order rejection: Red "Reject" button for pending orders (marks as CANCELLED)
+- ✅ Staff status progression: Dropdown menu for moving orders through workflow (PENDING → PREPARING → READY → COMPLETED)
+- ✅ Student order cancellation: Cancel button for pending orders in OrderHistoryPage
+- ✅ Firebase auth error mapping: Friendly error messages for auth failures (`auth/wrong-password`, `auth/invalid-credential`, etc.)
+
+These items reflect the current state of the system and are available in:
+- `frontend/src/pages/staff/StaffDashboardPage.jsx` (queue overview, status cards, reject/update buttons)
+- `frontend/src/pages/staff/StaffQueuePage.jsx` (full queue with reject button)
+- `frontend/src/pages/student/OrderHistoryPage.jsx` (student cancel for pending orders)
+- `frontend/src/context/AuthContext.jsx` (friendly Firebase error messages)
+- Backend `/api/staff` routes for all staff order operations
+4. ✓ Catalog entities (Stall, MenuItem)
+5. ✓ Catalog CRUD + read endpoints
+6. ✓ Order placement with validation
+7. ✓ Order cancellation with window check
+8. ✓ Order audit trail logging
+9. ✓ Scheduler for auto-unclaimed
+
+---
+
+## Phase 2: Advanced Backend (COMPLETED ✓)
+
+10. ✓ Staff queue management
+11. ✓ Staff status updates
+12. ✓ Order notifications (SSE)
+13. ✓ Reporting summary
+14. ✓ Staff dashboard
+
+---
+
+## Phase 3: Frontend (COMPLETED ✓)
+
+15. [x] Student login (Firebase) - ✅ Core auth working, friendly error messages
+16. [x] Student menu browsing
+17. [x] Student order placement flow
+18. [x] Student order tracking (live SSE)
+19. ✅ Student order history with cancel button (PENDING only)
+20. ✅ Staff dashboard with queue overview
+21. ✅ Staff queue view with status cards (Pending/Preparing/Ready/Completed counts)
+22. ✅ Staff status update UI (dropdown progression: PENDING → PREPARING → READY → COMPLETED)
+23. ✅ Reject button for pending orders (dashboard & queue page)
+24. [x] Responsive design enhancements
+
+---
+
+# 12. KNOWN LIMITATIONS & FUTURE WORK
+
+* Single instance scheduler (OK for MVP; use ShedLock for clustered deployments)
+* SSE in-memory notification hub (OK for MVP; use message queue for scale)
+* No database connection pooling optimization yet
+* No caching layer (PostgreSQL is fast enough for MVP scale)
+* No API rate limiting (add later if needed)
+* No comprehensive logging (basic Spring logging only)
+
+---
+
+# 13. FINAL ARCHITECTURE SUMMARY
+
+### Simple Student Flow:
+
+```
+1. Student logs in via Firebase
+2. Student browses stalls/menus
+3. Student selects items + pickup slot (≥15 min away)
+4. Order placed → queue number assigned
+5. Staff sees order in queue, updates status
+6. Student gets SSE notification (status change)
+7. Student picks up order before 10-min grace period
+```
+
+### Simple Staff Flow:
+
+```
+1. Staff logs in via Firebase
+2. Staff views incoming orders for stall
+3. Staff marks order: PENDING → PREPARING → READY
+4. Student picks up
+5. Staff marks: READY → COMPLETED
+   (or auto-marks UNCLAIMED if time expires)
+```
+
+### System Automation:
+
+```
+Every 60 seconds:
+- Check for READY orders past pickup_slot + 10 min
+- Auto-mark as UNCLAIMED
+- Notify student via SSE
+```
+
+---
+
+# 14. SUCCESS CRITERIA
+
+✅ Backend fully implemented and tested (120+ unit tests passing)
+
+✅ All order lifecycle rules enforced (placement, cancellation, expiration, audit)
+
+✅ Role-based access control working (STUDENT vs STAFF)
+
+✅ Firebase authentication integrated and secure
+
+✅ Database configured (PostgreSQL profile ready)
+
+✅ README + Project Requirements documented
+
+⏳ Frontend: Student & Staff dashboards (next phase)
+
+⏳ Full integration testing (end-to-end)
+
+⏳ Staging deployment
+
+⏳ Production deployment
+
+---
+
+**Status:** Backend ✓ | Frontend ⏳ | Ready for integration testing

@@ -37,12 +37,12 @@ class UserAccountTest {
 
 		user.updateProfile("Janet Doe", "2024-0002", "janet.doe@school.edu");
 		user.linkFirebaseAccount("firebase-uid-2");
-		user.changeRole(UserRole.STAFF);
+		user.changeRole(UserRole.ADMIN);
 
 		assertEquals("Janet Doe", user.getName());
 		assertEquals("2024-0002", user.getStudentId());
 		assertEquals("janet.doe@school.edu", user.getEmail());
 		assertEquals("firebase-uid-2", user.getFirebaseUid());
-		assertEquals(UserRole.STAFF, user.getRole());
+		assertEquals(UserRole.ADMIN, user.getRole());
 	}
 }
