@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 // Components
 import Navbar from './components/shared/Navbar';
 import PrivateRoute from './components/common/PrivateRoute';
+import { useAuth } from './hooks/useAuth';
 
 // Pages - Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -20,8 +21,31 @@ import OrderHistoryPage from './pages/student/OrderHistoryPage';
 import StaffDashboardPage from './pages/staff/StaffDashboardPage';
 import StaffQueuePage from './pages/staff/StaffQueuePage';
 import StaffReportingPage from './pages/staff/StaffReportingPage';
+import StaffAdminPage from './pages/staff/StaffAdminPage';
+import StaffMenuItemManagementPage from './pages/staff/StaffMenuItemManagementPage';
 
 function App() {
+  const { isAuthenticated, userRole, loading } = useAuth();
+  const fallbackPath = loading
+    ? '/login'
+    : isAuthenticated
+      ? userRole === 'STUDENT'
+        ? '/dashboard'
+        : userRole === 'ADMIN'
+          ? '/staff/admin'
+          : '/staff/dashboard'
+      : '/login';
+
+  const LandingPage = () => {
+    if (userRole === 'ADMIN') {
+      return <StaffAdminPage />;
+    }
+    if (userRole === 'STAFF') {
+      return <StaffDashboardPage />;
+    }
+    return <StudentDashboardPage />;
+  };
+
   return (
     <BrowserRouter>
       <Navbar />
@@ -45,8 +69,8 @@ function App() {
         <Route
           path="/"
           element={
-            <PrivateRoute requiredRole="STUDENT">
-              <StudentDashboardPage />
+            <PrivateRoute>
+              <LandingPage />
             </PrivateRoute>
           }
         />
@@ -101,7 +125,21 @@ function App() {
           }
         />
         <Route
-          path="/staff/reporting"
+          path="/staff/menu"
+          element={
+            <PrivateRoute requiredRole="STAFF">
+              <StaffMenuItemManagementPage />
+            </PrivateRoute>
+          }
+        />
+        <Route          path="/staff/admin"
+          element={
+            <PrivateRoute requiredRole="ADMIN">
+              <StaffAdminPage />
+            </PrivateRoute>
+          }
+        />
+        <Route          path="/staff/reporting"
           element={
             <PrivateRoute requiredRole="STAFF">
               <StaffReportingPage />
@@ -110,7 +148,7 @@ function App() {
         />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to={fallbackPath} replace />} />
       </Routes>
     </BrowserRouter>
   );

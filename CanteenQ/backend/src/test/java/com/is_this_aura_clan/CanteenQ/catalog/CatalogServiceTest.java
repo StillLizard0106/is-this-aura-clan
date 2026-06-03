@@ -22,7 +22,7 @@ class CatalogServiceTest {
 		com.is_this_aura_clan.CanteenQ.order.OrderRepository orderRepository = mock(com.is_this_aura_clan.CanteenQ.order.OrderRepository.class);
 		Stall stall = new Stall("Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM");
 		when(stallRepository.findAll()).thenReturn(List.of(stall));
-		when(orderRepository.countByStallIdAndStatusIn(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+		when(orderRepository.countByStall_IdAndStatusIn(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(0L);
 
 		CatalogService service = new CatalogService(stallRepository, menuItemRepository, orderRepository);
 
@@ -45,7 +45,7 @@ class CatalogServiceTest {
 
 		when(stallRepository.existsById(stallId)).thenReturn(true);
 		when(menuItemRepository.findByStall_IdOrderByItemNameAsc(stallId)).thenReturn(List.of(menuItem));
-		when(orderRepository.countByStallIdAndStatusIn(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(0L);
+		when(orderRepository.countByStall_IdAndStatusIn(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(0L);
 
 		CatalogService service = new CatalogService(stallRepository, menuItemRepository, orderRepository);
 

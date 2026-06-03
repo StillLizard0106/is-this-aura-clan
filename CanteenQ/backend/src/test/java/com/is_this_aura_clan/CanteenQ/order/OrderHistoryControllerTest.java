@@ -33,8 +33,8 @@ class OrderHistoryControllerTest {
 		OrderHistoryService orderHistoryService = mock(OrderHistoryService.class);
 		when(orderHistoryService.getMyOrders(new FirebaseAuthenticationPrincipal("uid-student", "student@school.edu"))).thenReturn(
 			new MyOrdersResponse(
-				List.of(new OrderResponse(null, null, new BigDecimal("45.00"), java.time.LocalDateTime.of(2026, 5, 30, 8, 20), 1, OrderStatus.PENDING, List.of())),
-				List.of(new OrderResponse(null, null, new BigDecimal("90.00"), java.time.LocalDateTime.of(2026, 5, 29, 8, 20), 2, OrderStatus.COMPLETED, List.of()))
+				List.of(new OrderResponse(null, "Rice Bowl", null, new BigDecimal("45.00"), java.time.LocalDateTime.of(2026, 5, 30, 8, 20), 1, OrderStatus.PENDING, List.of())),
+				List.of(new OrderResponse(null, "Rice Bowl", null, new BigDecimal("90.00"), java.time.LocalDateTime.of(2026, 5, 29, 8, 20), 2, OrderStatus.COMPLETED, List.of()))
 			)
 		);
 

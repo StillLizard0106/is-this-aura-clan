@@ -52,8 +52,14 @@ public class StaffStallAssignmentService {
 			.orElseThrow(() -> new StallNotFoundException("No stall found for id " + request.stallId()));
 
 		// Check if already assigned
-		if (staffStallRepository.existsByStaffAndStall(staffUser, stall)) {
-			throw new IllegalArgumentException("Stall already assigned to this staff");
+		// Enforce one-to-one: staff may only be assigned to a single stall.
+		var existing = staffStallRepository.findByStaff(staffUser);
+		if (!existing.isEmpty()) {
+			boolean alreadyHere = existing.stream().anyMatch(a -> a.getStall().getId().equals(stall.getId()));
+			if (alreadyHere) {
+				throw new IllegalArgumentException("Stall already assigned to this staff");
+			}
+			throw new IllegalArgumentException("You are already assigned to another stall");
 		}
 
 		StaffStall assignment = new StaffStall(staffUser, stall);
@@ -83,6 +89,7 @@ public class StaffStallAssignmentService {
 
 	private UserAccount getUserAccount(FirebaseAuthenticationPrincipal principal) {
 		return userAccountRepository.findByFirebaseUid(principal.uid())
+			.or(() -> userAccountRepository.findByEmail(principal.email()))
 			.orElseThrow(() -> new IllegalArgumentException("User not found"));
 	}
 

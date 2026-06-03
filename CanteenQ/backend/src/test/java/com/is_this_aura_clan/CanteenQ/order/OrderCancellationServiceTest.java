@@ -43,7 +43,7 @@ class OrderCancellationServiceTest {
 		assignStallId(stall, UUID.fromString("22222222-2222-2222-2222-222222222222"));
 		MenuItem menuItem = new MenuItem(stall, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", true);
 		assignMenuItemId(menuItem, UUID.fromString("33333333-3333-3333-3333-333333333333"));
-		CanteenOrder order = new CanteenOrder(student, stall.getId(), new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
+		CanteenOrder order = new CanteenOrder(student, stall, new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
 		assignOrderId(order, UUID.fromString("44444444-4444-4444-4444-444444444444"));
 		order.addItem(new OrderItem(order, menuItem, 1, new BigDecimal("45.00")));
 
@@ -73,7 +73,7 @@ class OrderCancellationServiceTest {
 		assignUserId(student, UUID.fromString("11111111-1111-1111-1111-111111111111"));
 		Stall stall = new Stall("Rice Bowl", "Demo Vendor", "8:00 AM - 2:00 PM");
 		assignStallId(stall, UUID.fromString("22222222-2222-2222-2222-222222222222"));
-		CanteenOrder order = new CanteenOrder(student, stall.getId(), new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 7, 40), 1);
+		CanteenOrder order = new CanteenOrder(student, stall, new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 7, 40), 1);
 		assignOrderId(order, UUID.fromString("44444444-4444-4444-4444-444444444444"));
 
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), any())).thenReturn(student);

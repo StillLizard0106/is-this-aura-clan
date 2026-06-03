@@ -1,0 +1,1 @@
+from pathlib import Path\npath = Path("src/main/resources/application-postgres.properties")\ntext = path.read_text(encoding="utf-8")\nfor i,line in enumerate(text.splitlines(),1):\n    if "firebase.admin.credentials-path" in line:\n        print(i, repr(line))\n        break

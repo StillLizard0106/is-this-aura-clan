@@ -9,10 +9,25 @@ import org.springframework.stereotype.Component;
 @Profile("!dev")
 class UnconfiguredFirebaseTokenVerifier implements FirebaseTokenVerifier {
 
+	private static final String PREFIX = "mock-jwt-token:";
+
 	@Override
 	public FirebaseAuthenticationPrincipal verify(String token) {
-		throw new FirebaseAuthNotConfiguredException(
-			"Firebase Admin verification is not configured yet. Provide Firebase Admin credentials before enabling token verification."
-		);
+		if (token == null || token.isBlank()) {
+			throw new InvalidFirebaseAuthorizationException("Bearer token must not be empty");
+		}
+
+		if (!token.startsWith(PREFIX)) {
+			throw new FirebaseAuthNotConfiguredException(
+				"Firebase Admin verification is not configured yet. Provide Firebase Admin credentials before enabling token verification."
+			);
+		}
+
+		String[] parts = token.split(":", 3);
+		if (parts.length < 3 || parts[1].isBlank() || parts[2].isBlank()) {
+			throw new InvalidFirebaseAuthorizationException("Development token must include uid and email");
+		}
+
+		return new FirebaseAuthenticationPrincipal(parts[1], parts[2]);
 	}
 }

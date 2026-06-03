@@ -50,10 +50,10 @@ class OrderServiceTest {
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), any())).thenReturn(student);
 		when(userAccountRepository.findByFirebaseUid("uid-student")).thenReturn(Optional.of(student));
 		when(stallRepository.findById(stall.getId())).thenReturn(Optional.of(stall));
-		when(orderRepository.existsByStudent_IdAndStallIdAndStatusIn(student.getId(), stall.getId(), List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY)))
+		when(orderRepository.existsByStudent_IdAndStall_IdAndStatusIn(student.getId(), stall.getId(), List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY)))
 			.thenReturn(false);
 		when(menuItemRepository.findByIdAndStall_Id(menuItem.getId(), stall.getId())).thenReturn(Optional.of(menuItem));
-		when(orderRepository.countByStallIdAndPickupSlotBetweenAndStatusIn(any(), any(), any(), any())).thenReturn(0L);
+		when(orderRepository.countByStall_IdAndPickupSlotBetweenAndStatusIn(any(), any(), any(), any())).thenReturn(0L);
 		when(orderRepository.save(any(CanteenOrder.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		OrderService service = new OrderService(authorizationService, userAccountRepository, stallRepository, menuItemRepository, orderRepository, fixedClock, orderResponseMapper);
@@ -192,7 +192,7 @@ class OrderServiceTest {
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), any())).thenReturn(student);
 		when(userAccountRepository.findByFirebaseUid("uid-student")).thenReturn(Optional.of(student));
 		when(stallRepository.findById(stall.getId())).thenReturn(Optional.of(stall));
-		when(orderRepository.existsByStudent_IdAndStallIdAndStatusIn(student.getId(), stall.getId(), List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY)))
+		when(orderRepository.existsByStudent_IdAndStall_IdAndStatusIn(student.getId(), stall.getId(), List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY)))
 			.thenReturn(true);
 
 		OrderService service = new OrderService(authorizationService, userAccountRepository, stallRepository, menuItemRepository, orderRepository, fixedClock, orderResponseMapper);
@@ -225,10 +225,10 @@ class OrderServiceTest {
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), any())).thenReturn(student);
 		when(userAccountRepository.findByFirebaseUid("uid-student")).thenReturn(Optional.of(student));
 		when(stallRepository.findById(stall.getId())).thenReturn(Optional.of(stall));
-		when(orderRepository.existsByStudent_IdAndStallIdAndStatusIn(student.getId(), stall.getId(), List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY)))
+		when(orderRepository.existsByStudent_IdAndStall_IdAndStatusIn(student.getId(), stall.getId(), List.of(OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY)))
 			.thenReturn(false);
 		when(menuItemRepository.findByIdAndStall_Id(menuItem.getId(), stall.getId())).thenReturn(Optional.of(menuItem));
-		when(orderRepository.countByStallIdAndPickupSlotBetweenAndStatusIn(any(), any(), any(), any())).thenReturn(100L);
+		when(orderRepository.countByStall_IdAndPickupSlotBetweenAndStatusIn(any(), any(), any(), any())).thenReturn(100L);
 
 		OrderService service = new OrderService(authorizationService, userAccountRepository, stallRepository, menuItemRepository, orderRepository, fixedClock, orderResponseMapper);
 

@@ -28,7 +28,7 @@ class StallManagementServiceTest {
 			.thenReturn(null);
 		when(stallRepository.findByStallNameIgnoreCase("Rice Bowl")).thenReturn(Optional.empty());
 		when(stallRepository.save(any(Stall.class))).thenAnswer(invocation -> invocation.getArgument(0));
-		when(orderRepository.countByStallIdAndStatusIn(any(), any())).thenReturn(0L);
+		when(orderRepository.countByStall_IdAndStatusIn(any(), any())).thenReturn(0L);
 
 		StallManagementService service = new StallManagementService(stallRepository, authorizationService, orderRepository);
 
@@ -55,7 +55,7 @@ class StallManagementServiceTest {
 		when(stallRepository.findById(stallId)).thenReturn(Optional.of(existing));
 		when(stallRepository.findByStallNameIgnoreCase("Snack Corner")).thenReturn(Optional.empty());
 		when(stallRepository.save(any(Stall.class))).thenAnswer(invocation -> invocation.getArgument(0));
-		when(orderRepository.countByStallIdAndStatusIn(any(), any())).thenReturn(0L);
+		when(orderRepository.countByStall_IdAndStatusIn(any(), any())).thenReturn(0L);
 
 		StallManagementService service = new StallManagementService(stallRepository, authorizationService, orderRepository);
 
@@ -81,7 +81,7 @@ class StallManagementServiceTest {
 		UUID stallId = UUID.randomUUID();
 		Stall existing = new Stall("Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM");
 		when(stallRepository.findById(stallId)).thenReturn(Optional.of(existing));
-		when(orderRepository.countByStallIdAndStatusIn(any(), any())).thenReturn(0L);
+		when(orderRepository.countByStall_IdAndStatusIn(any(), any())).thenReturn(0L);
 
 		StallManagementService service = new StallManagementService(stallRepository, authorizationService, orderRepository);
 
@@ -98,7 +98,7 @@ class StallManagementServiceTest {
 		when(authorizationService.requireRole(any(FirebaseAuthenticationPrincipal.class), eq(UserRole.STAFF)))
 			.thenReturn(null);
 		when(stallRepository.findByStallNameIgnoreCase("Rice Bowl")).thenReturn(Optional.of(new Stall("Rice Bowl", "A. Vendor", "8:00 AM - 2:00 PM")));
-		when(orderRepository.countByStallIdAndStatusIn(any(), any())).thenReturn(0L);
+		when(orderRepository.countByStall_IdAndStatusIn(any(), any())).thenReturn(0L);
 
 		StallManagementService service = new StallManagementService(stallRepository, authorizationService, orderRepository);
 

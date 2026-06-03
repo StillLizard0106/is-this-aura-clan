@@ -54,6 +54,7 @@ class OrderControllerTest {
 		when(orderService.placeOrder(any(), any())).thenReturn(
 			new OrderResponse(
 				UUID.fromString("33333333-3333-3333-3333-333333333333"),
+				"Rice Bowl",
 				stallId,
 				new BigDecimal("90.00"),
 				java.time.LocalDateTime.of(2026, 5, 30, 8, 20),
@@ -116,6 +117,7 @@ class OrderControllerTest {
 		when(cancellationService.cancel(any(), any())).thenReturn(
 			new OrderResponse(
 				orderId,
+				"Rice Bowl",
 				UUID.fromString("11111111-1111-1111-1111-111111111111"),
 				new BigDecimal("45.00"),
 				java.time.LocalDateTime.of(2026, 5, 30, 8, 20),
@@ -149,6 +151,7 @@ class OrderControllerTest {
 		when(orderDetailService.getOrder(any(), any())).thenReturn(
 			new OrderResponse(
 				orderId,
+				"Rice Bowl",
 				UUID.fromString("11111111-1111-1111-1111-111111111111"),
 				new BigDecimal("45.00"),
 				java.time.LocalDateTime.of(2026, 5, 30, 8, 20),

@@ -3,6 +3,16 @@
 ## Unreleased
 
 ### Added
+- Default backend profile now points to PostgreSQL so application data persists across restarts.
+- Test profile remains H2 so the automated suite stays isolated from the local database.
+- README setup notes updated to reflect the new persistence default.
+- Demo data bootstrap now resolves existing staff by `firebase_uid` before seeding, so Postgres restarts do not fail on duplicate unique keys.
+- Mock auth tokens are now accepted even when Firebase Admin is not configured, so the dev frontend can talk to the persisted backend.
+- Frontend staff stall creation page with validation and a POST flow to `/api/staff/stalls`.
+- Frontend staff menu-item creation page with stall selection and a POST flow to `/api/staff/stalls/{stallId}/menu-items`.
+- Staff dashboard now embeds menu-item management for assigned stalls only.
+- New admin staff page manages all stalls with create, edit, and delete actions.
+- Demo bootstrap now seeds a separate `admin@canteen.local` staff account for the admin page.
 - Backend health check endpoint at `GET /api/health`.
 - Web slice test that verifies the health endpoint returns `{"status":"UP"}`.
 - JPA foundation for `users` with a `UserAccount` entity, role enum, and repository.
@@ -67,6 +77,17 @@
 - Unit tests for `StaffOrderAuditService` and `StaffOrderAuditController`.
 
 ### Summary
+- Prevents the staff dashboard from treating a backend connection failure as an access-denied state, and shows a local-mode offline notice instead.
+- Keeps `staff@canteen.local` and the other demo staff account as `STAFF`, keeps `admin@canteen.local` as `ADMIN`, and makes the frontend fallback honor that split offline.
+- Removes the order queue and daily report entry points from the dashboard UI while keeping admin stall management separate.
+- Makes PostgreSQL the default runtime database while keeping tests on H2.
+- Keeps the persistence setup documented so local runs match the actual backend behavior.
+- Keeps the demo bootstrap idempotent so persistence does not break app startup.
+- Keeps mock development auth working against the backend without requiring Firebase Admin credentials.
+- Adds a minimal staff-only stall creation form without changing the existing backend contract.
+- Adds a minimal staff-only menu-item creation form that reuses assigned stalls.
+- Keeps stall administration separate from per-stall menu work.
+- Keeps the admin page isolated to a dedicated demo staff account.
 - Provides a minimal backend readiness endpoint for initial integration and verification.
 - Establishes the first persistent domain model without changing the default runtime database setup.
 - Adds a stable backend seam for Firebase token verification without requiring live Firebase credentials yet.

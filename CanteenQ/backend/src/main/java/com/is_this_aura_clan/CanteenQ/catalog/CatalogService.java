@@ -46,7 +46,7 @@ public class CatalogService {
 
 	private StallResponse toStallResponse(Stall stall) {
 		int queueLimit = stall.getQueueLimit();
-		int queueSlotsLeft = Math.max(0, queueLimit - Math.toIntExact(orderRepository.countByStallIdAndStatusIn(stall.getId(), ACTIVE_STATUSES)));
+		int queueSlotsLeft = Math.max(0, queueLimit - Math.toIntExact(orderRepository.countByStall_IdAndStatusIn(stall.getId(), ACTIVE_STATUSES)));
 		return new StallResponse(
 			stall.getId(),
 			stall.getStallName(),

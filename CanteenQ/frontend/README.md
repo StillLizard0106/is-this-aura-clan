@@ -63,19 +63,21 @@ src/
 ## Features
 
 ### Student Features
-- ✅ Firebase authentication
+- ✅ Firebase authentication with friendly error messages
 - ✅ Browse stalls and menus
 - ✅ Place orders with pickup slot selection
 - ✅ Real-time order status tracking (SSE)
 - ✅ View order history
-- ✅ Cancel orders (with 15-minute window)
+- ✅ Cancel orders (PENDING only, with 15-minute window)
 
 ### Staff Features
-- ✅ Staff dashboard
-- ✅ Real-time order queue view
-- ✅ Update order status (PENDING → PREPARING → READY → COMPLETED)
+- ✅ Staff dashboard with queue overview
+- ✅ Real-time order queue view with status cards
+- ✅ Update order status via dropdown (PENDING → PREPARING → READY → COMPLETED)
+- ✅ Reject pending orders (mark as CANCELLED)
 - ✅ View daily reporting summary
 - ✅ Per-stall order and revenue breakdown
+- ✅ Order count summary (Pending/Preparing/Ready/Completed)
 
 ## Build
 

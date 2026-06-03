@@ -2,6 +2,7 @@ package com.is_this_aura_clan.CanteenQ.account;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -10,7 +11,9 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
+import com.is_this_aura_clan.CanteenQ.auth.FirebaseAdminProperties;
 import com.is_this_aura_clan.CanteenQ.auth.FirebaseAuthenticationPrincipal;
+import com.is_this_aura_clan.CanteenQ.auth.InvalidFirebaseAuthorizationException;
 
 class UserAccountSyncServiceTest {
 
@@ -64,5 +67,60 @@ class UserAccountSyncServiceTest {
 		assertEquals("staff@canteen.local", saved.getEmail());
 		assertEquals("uid-staff", saved.getFirebaseUid());
 		assertEquals(UserRole.STAFF, saved.getRole());
+	}
+
+	@Test
+	void syncPromotesDemoAdminEmailToAdminRole() {
+		UserAccountRepository repository = mock(UserAccountRepository.class);
+		when(repository.findByFirebaseUid("uid-admin")).thenReturn(Optional.empty());
+		when(repository.findByEmail("admin@canteen.local")).thenReturn(Optional.empty());
+		when(repository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		UserAccountSyncService service = new UserAccountSyncService(repository);
+
+		UserAccount saved = service.sync(new FirebaseAuthenticationPrincipal("uid-admin", "admin@canteen.local"));
+
+		assertEquals("Admin", saved.getName());
+		assertEquals("admin@canteen.local", saved.getEmail());
+		assertEquals("uid-admin", saved.getFirebaseUid());
+		assertEquals(UserRole.ADMIN, saved.getRole());
+	}
+
+	@Test
+	void syncRejectsStudentEmailWhenAllowedDomainDoesNotMatch() {
+		UserAccountRepository repository = mock(UserAccountRepository.class);
+		when(repository.findByFirebaseUid("uid-123")).thenReturn(Optional.empty());
+		when(repository.findByEmail("jane.doe@school.edu")).thenReturn(Optional.empty());
+
+		FirebaseAdminProperties properties = new FirebaseAdminProperties();
+		properties.setAllowedEmailDomain("other.school.edu");
+
+		UserAccountSyncService service = new UserAccountSyncService(repository);
+		service.setFirebaseAdminProperties(properties);
+
+		assertThrows(InvalidFirebaseAuthorizationException.class, () ->
+			service.sync(new FirebaseAuthenticationPrincipal("uid-123", "jane.doe@school.edu"))
+		);
+	}
+
+	@Test
+	void syncAllowsStudentEmailWhenAllowedDomainMatches() {
+		UserAccountRepository repository = mock(UserAccountRepository.class);
+		when(repository.findByFirebaseUid("uid-123")).thenReturn(Optional.empty());
+		when(repository.findByEmail("jane.doe@other.school.edu")).thenReturn(Optional.empty());
+		when(repository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		FirebaseAdminProperties properties = new FirebaseAdminProperties();
+		properties.setAllowedEmailDomain("other.school.edu");
+
+		UserAccountSyncService service = new UserAccountSyncService(repository);
+		service.setFirebaseAdminProperties(properties);
+
+		UserAccount saved = service.sync(new FirebaseAuthenticationPrincipal("uid-123", "jane.doe@other.school.edu"));
+
+		assertEquals("Jane Doe", saved.getName());
+		assertEquals("jane.doe@other.school.edu", saved.getEmail());
+		assertEquals("uid-123", saved.getFirebaseUid());
+		assertEquals(UserRole.STUDENT, saved.getRole());
 	}
 }

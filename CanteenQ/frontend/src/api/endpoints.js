@@ -48,6 +48,17 @@ export const subscribeToOrderUpdates = (callback, errorCallback) => {
 // Staff APIs
 export const getStaffDashboard = () => client.get('/staff/dashboard');
 export const getMyStalls = () => client.get('/staff/assignments');
+export const getAllStaffStalls = () => client.get('/staff/stalls');
+export const createStaffStall = (payload) => client.post('/staff/stalls', payload);
+export const updateStaffStall = (stallId, payload) => client.put(`/staff/stalls/${stallId}`, payload);
+export const deleteStaffStall = (stallId) => client.delete(`/staff/stalls/${stallId}`);
+export const getStaffMenuItems = (stallId) => client.get(`/staff/stalls/${stallId}/menu-items`);
+export const createStaffMenuItem = (stallId, payload) => client.post(`/staff/stalls/${stallId}/menu-items`, payload);
+export const updateStaffMenuItem = (stallId, menuItemId, payload) => client.put(`/staff/stalls/${stallId}/menu-items/${menuItemId}`, payload);
+export const deleteStaffMenuItem = (stallId, menuItemId) => client.delete(`/staff/stalls/${stallId}/menu-items/${menuItemId}`);
+export const getAdminStallAssignments = (stallId) => client.get(`/admin/stalls/${stallId}/assignments`);
+export const assignStaffToStall = (stallId, payload) => client.post(`/admin/stalls/${stallId}/assignments`, payload);
+export const removeStaffFromStall = (stallId, staffId) => client.delete(`/admin/stalls/${stallId}/assignments/${staffId}`);
 export const getStaffOrders = (params = {}) => 
   client.get('/staff/orders', { params });
 export const getStaffOrderDetail = (orderId) => client.get(`/staff/orders/${orderId}`);
@@ -57,8 +68,11 @@ export const getOrderAuditTrail = (orderId) => client.get(`/staff/orders/${order
 export const markOrderUnclaimed = (orderId) => client.patch(`/staff/orders/${orderId}/unclaimed`);
 
 // Reporting APIs
-export const getReportingSummary = (params = {}) =>
-  client.get('/staff/reporting/summary', { params });
+export const getReportingDaily = (params = {}) =>
+  client.get('/reporting/daily', { params });
+
+export const getReportingStalls = (params = {}) =>
+  client.get('/reporting/stalls', { params });
 
 // Health API
 export const checkHealth = () => client.get('/health');

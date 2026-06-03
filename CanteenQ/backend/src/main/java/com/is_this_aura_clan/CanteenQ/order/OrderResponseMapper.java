@@ -8,6 +8,7 @@ class OrderResponseMapper {
 	OrderResponse toResponse(CanteenOrder order) {
 		return new OrderResponse(
 			order.getId(),
+			order.getStall().getStallName(),
 			order.getStallId(),
 			order.getTotalPrice(),
 			order.getPickupSlot(),

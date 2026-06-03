@@ -14,19 +14,26 @@ const client = axios.create({
 client.interceptors.request.use(
   async (config) => {
     try {
-      if (isUsingMock) {
-        // Mock Auth
-        if (authService?.currentUser) {
-          const token = await authService.getIdToken();
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      } else {
-        // Firebase Auth
-        if (authService?.currentUser) {
-          const token = await authService.currentUser.getIdToken();
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+      const headers = config.headers || {};
+      let token = null;
+
+      if (authService?.currentUser) {
+        token = isUsingMock
+          ? await authService.getIdToken()
+          : await authService.currentUser.getIdToken();
       }
+
+      if (!token) {
+        token = localStorage.getItem('firebaseToken');
+      }
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      } else {
+        delete headers.Authorization;
+      }
+
+      config.headers = headers;
     } catch (error) {
       console.error('Error getting auth token:', error);
     }

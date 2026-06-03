@@ -5,6 +5,7 @@ import LoadingSpinner from './LoadingSpinner';
 
 const PrivateRoute = ({ children, requiredRole = null }) => {
   const { isAuthenticated, userRole, loading } = useAuth();
+  const dashboardPath = userRole === 'STUDENT' ? '/dashboard' : '/staff/dashboard';
 
   if (loading) {
     return <LoadingSpinner />;
@@ -14,8 +15,8 @@ const PrivateRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && userRole !== requiredRole) {
-    return <Navigate to="/" replace />;
+  if (requiredRole && userRole !== requiredRole && userRole !== 'ADMIN') {
+    return <Navigate to={dashboardPath} replace />;
   }
 
   return children;

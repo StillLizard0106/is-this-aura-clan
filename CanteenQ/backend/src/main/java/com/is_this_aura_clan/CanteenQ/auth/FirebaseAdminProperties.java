@@ -13,6 +13,9 @@ public class FirebaseAdminProperties {
 	private String credentialsJson;
 	private String projectId;
 
+	/** Optional: allowed email domain for student registrations (e.g. school.edu). If set, new student accounts require this domain. */
+	private String allowedEmailDomain;
+
 	public boolean isEnabled() {
 		return enabled;
 	}
@@ -43,5 +46,13 @@ public class FirebaseAdminProperties {
 
 	public void setProjectId(String projectId) {
 		this.projectId = projectId;
+	}
+
+	public String getAllowedEmailDomain() {
+		return allowedEmailDomain;
+	}
+
+	public void setAllowedEmailDomain(String allowedEmailDomain) {
+		this.allowedEmailDomain = allowedEmailDomain;
 	}
 }

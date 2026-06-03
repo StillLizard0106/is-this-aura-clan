@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Plus, Minus, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, AlertCircle, Clock3, MapPin, BadgeInfo } from 'lucide-react';
 import { getMenuItems, getStalls, placeOrder } from '../../api/endpoints';
 import { formatCurrency } from '../../utils/currencyFormatter';
-import { formatDateTime } from '../../utils/dateFormatter';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import DateTimePickerField from '../../components/student/DateTimePickerField';
 import { toast } from 'react-toastify';
 
 const OrderPlacementPage = () => {
@@ -182,108 +182,160 @@ const OrderPlacementPage = () => {
   );
 
   return (
-    <div className="container-custom py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Place Your Order</h1>
+    <div
+      className="min-h-screen py-8"
+      style={{
+        background:
+          'radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 28%), radial-gradient(circle at top right, rgba(245, 168, 0, 0.08), transparent 24%), linear-gradient(180deg, #f8fbff 0%, #f3f7ff 100%)',
+      }}
+    >
+      <div className="container-custom">
+        <div className="mb-8 rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-blue-700">
+                <BadgeInfo size={14} />
+                Browse Menu
+              </p>
+              <h1 className="mb-3 text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
+                Place your order
+              </h1>
+              <p className="max-w-xl text-sm leading-6 text-slate-600 md:text-base">
+                Pick items from the stall below, build your cart, and choose a pickup time that fits your schedule.
+              </p>
+            </div>
+
+            {stallInfo && (
+              <div className="grid gap-3 rounded-[24px] border border-blue-100 bg-blue-950 px-5 py-4 text-white shadow-[0_14px_36px_rgba(15,23,42,0.18)]">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-200">Current Stall</p>
+                  <h2 className="mt-1 text-2xl font-semibold text-white">{stallInfo.stallName}</h2>
+                  <p className="mt-1 text-sm text-blue-100">{stallInfo.vendorName}</p>
+                </div>
+                <div className="grid gap-2 text-sm text-blue-50 sm:grid-cols-2">
+                  <div className="rounded-2xl bg-white/10 px-3 py-2">
+                    <span className="flex items-center gap-2 text-blue-100">
+                      <Clock3 size={14} />
+                      Hours
+                    </span>
+                    <p className="mt-1 font-semibold text-white">{stallInfo.operatingHours || 'Not specified'}</p>
+                  </div>
+                  <div className="rounded-2xl bg-white/10 px-3 py-2">
+                    <span className="flex items-center gap-2 text-blue-100">
+                      <MapPin size={14} />
+                      Queue
+                    </span>
+                    <p className="mt-1 font-semibold text-white">
+                      {Math.max((stallInfo.queueLimit ?? 100) - (stallInfo.queueSlotsLeft ?? 100), 0)}/{stallInfo.queueLimit ?? 100}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
           <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
           <p className="text-red-700">{error}</p>
         </div>
       )}
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Menu Items */}
-        <div className="md:col-span-2">
-          <div className="card mb-6">
-            <h2 className="text-xl font-semibold mb-4">Menu Items</h2>
-            <div className="space-y-3">
-              {menuItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between items-center p-4 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">
-                      {item.itemName}
-                    </h3>
-                    <p className="text-sm text-gray-600">{item.description}</p>
-                    <p className="text-lg font-bold text-blue-600 mt-1">
-                      {formatCurrency(item.price)}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(340px,1fr)]">
+        <div className="rounded-[28px] border border-white/70 bg-white/85 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl md:p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Menu Items</h2>
+              <p className="text-sm text-slate-500">Tap an item to add it to your cart.</p>
+            </div>
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+              {menuItems.length} items
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            {menuItems.map((item) => (
+              <div
+                key={item.id}
+                className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_18px_30px_rgba(37,99,235,0.08)]"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex items-center gap-3">
+                      <h3 className="truncate text-lg font-semibold text-slate-950">
+                        {item.itemName}
+                      </h3>
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                        {formatCurrency(item.price)}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-6 text-slate-600">
+                      {item.description || 'No description provided.'}
                     </p>
                   </div>
+
                   <button
                     onClick={() => addToCart(item)}
                     disabled={item.available === false}
-                    className="btn-primary"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
                     <Plus size={18} />
+                    Add
                   </button>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Order Summary */}
         <div>
-          <div className="card sticky top-4">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <div className="sticky top-4 rounded-[28px] border border-slate-200 bg-slate-950 p-5 text-white shadow-[0_24px_60px_rgba(15,23,42,0.22)] md:p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold">
               <ShoppingCart size={20} /> Order Summary
             </h2>
 
-            {stallInfo && (
-              <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 p-3">
-                <div className="flex items-center justify-between text-sm font-semibold text-blue-900">
-                  <span>Queue</span>
-                  <span>
-                    {Math.max((stallInfo.queueLimit ?? 100) - (stallInfo.queueSlotsLeft ?? 100), 0)}
-                    /{stallInfo.queueLimit ?? 100}
-                  </span>
-                </div>
-                <p className="text-xs text-blue-800 mt-1">
-                  {stallInfo.queueSlotsLeft ?? 100} slots left
-                </p>
+            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="flex items-center justify-between text-sm font-semibold text-slate-100">
+                <span>Queue</span>
+                <span>
+                  {stallInfo ? Math.max((stallInfo.queueLimit ?? 100) - (stallInfo.queueSlotsLeft ?? 100), 0) : 0}
+                  /{stallInfo?.queueLimit ?? 100}
+                </span>
               </div>
-            )}
+              <p className="mt-1 text-xs text-slate-300">
+                {stallInfo ? `${stallInfo.queueSlotsLeft ?? 100} slots left` : 'Queue info unavailable'}
+              </p>
+            </div>
 
-            {/* Cart Items */}
-            <div className="mb-4 max-h-64 overflow-y-auto">
+            <div className="mb-4 max-h-72 space-y-3 overflow-y-auto pr-1">
               {cart.length === 0 ? (
-                <p className="text-gray-500 text-sm">No items in cart</p>
+                <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 p-5 text-center text-sm text-slate-300">
+                  No items in cart yet.
+                </div>
               ) : (
                 cart.map((item) => (
                   <div
                     key={item.menuItemId}
-                    className="flex justify-between items-center mb-3 p-2 border rounded"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"
                   >
-                    <div className="flex-1">
-                      <p className="font-semibold text-sm">{item.itemName}</p>
-                      <p className="text-xs text-gray-600">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-white">{item.itemName}</p>
+                      <p className="text-xs text-slate-300">
                         {formatCurrency(item.price)} x {item.quantity}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 rounded-xl bg-black/20 p-1">
                       <button
-                        onClick={() =>
-                          updateQuantity(
-                            item.menuItemId,
-                            item.quantity - 1
-                          )
-                        }
-                        className="p-1 hover:bg-gray-200 rounded"
+                        onClick={() => updateQuantity(item.menuItemId, item.quantity - 1)}
+                        className="rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
                       >
                         <Minus size={16} />
                       </button>
-                      <span className="w-6 text-center">{item.quantity}</span>
+                      <span className="w-7 text-center text-sm font-semibold">{item.quantity}</span>
                       <button
-                        onClick={() =>
-                          updateQuantity(
-                            item.menuItemId,
-                            item.quantity + 1
-                          )
-                        }
-                        className="p-1 hover:bg-gray-200 rounded"
+                        onClick={() => updateQuantity(item.menuItemId, item.quantity + 1)}
+                        className="rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
                       >
                         <Plus size={16} />
                       </button>
@@ -293,41 +345,36 @@ const OrderPlacementPage = () => {
               )}
             </div>
 
-            {/* Total */}
-            <div className="border-t pt-4 mb-4">
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-semibold text-gray-900">Total:</span>
-                <span className="text-2xl font-bold text-blue-600">
+            <div className="mb-4 border-t border-white/10 pt-4">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="font-semibold text-slate-200">Total</span>
+                <span className="text-3xl font-bold tracking-tight text-white">
                   {formatCurrency(getTotalPrice())}
                 </span>
               </div>
 
-              {/* Pickup Slot */}
-              <div className="form-group">
-                <label className="form-label">Pickup Time</label>
-                <input
-                  type="datetime-local"
-                  className="input-field"
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <DateTimePickerField
                   value={pickupSlot}
                   onChange={(e) => setPickupSlot(e.target.value)}
                   min={minPickupTime}
                   max={maxPickupTime}
+                  label="Pickup Time"
+                  hint="Choose a pickup time 15 minutes to 7 days from now, between 7:00 AM and 6:00 PM."
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Must be 15 minutes to 7 days from now and between 7:00 AM and 6:00 PM
-                </p>
               </div>
             </div>
 
             <button
               onClick={handlePlaceOrder}
               disabled={submitting}
-              className="btn-primary w-full"
+              className="w-full rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 px-4 py-3 text-sm font-bold text-slate-950 shadow-[0_16px_30px_rgba(245,168,0,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Placing order...' : 'Place Order'}
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

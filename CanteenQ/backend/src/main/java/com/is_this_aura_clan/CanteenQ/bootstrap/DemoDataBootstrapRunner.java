@@ -22,6 +22,8 @@ public class DemoDataBootstrapRunner implements CommandLineRunner {
 
 	private static final String DEMO_STAFF_EMAIL = "staff@canteen.local";
 	private static final String DEMO_STAFF_UID = "demo-staff-uid";
+	private static final String DEMO_ADMIN_EMAIL = "admin@canteen.local";
+	private static final String DEMO_ADMIN_UID = "demo-admin-uid";
 	private static final String DEMO_STALL_NAME = "Rice Bowl";
 
 	private final UserAccountRepository userAccountRepository;
@@ -44,12 +46,14 @@ public class DemoDataBootstrapRunner implements CommandLineRunner {
 	@Override
 	public void run(String... args) {
 		UserAccount staff = seedStaffAccount();
+		seedAdminAccount();
 		Stall stall = seedCatalog();
 		seedStaffStallAssignment(staff, stall);
 	}
 
 	private UserAccount seedStaffAccount() {
-		return userAccountRepository.findByEmail(DEMO_STAFF_EMAIL)
+		return userAccountRepository.findByFirebaseUid(DEMO_STAFF_UID)
+			.or(() -> userAccountRepository.findByEmail(DEMO_STAFF_EMAIL))
 			.map(existing -> {
 				boolean changed = false;
 				if (existing.getRole() != UserRole.STAFF) {
@@ -60,10 +64,38 @@ public class DemoDataBootstrapRunner implements CommandLineRunner {
 					existing.linkFirebaseAccount(DEMO_STAFF_UID);
 					changed = true;
 				}
+				if (!DEMO_STAFF_EMAIL.equals(existing.getEmail())) {
+					existing.updateProfile(existing.getName(), existing.getStudentId(), DEMO_STAFF_EMAIL);
+					changed = true;
+				}
 				return changed ? userAccountRepository.save(existing) : existing;
 			})
 			.orElseGet(() -> userAccountRepository.save(
 				new UserAccount("Demo Staff", null, DEMO_STAFF_EMAIL, DEMO_STAFF_UID, UserRole.STAFF)
+			));
+	}
+
+	private UserAccount seedAdminAccount() {
+		return userAccountRepository.findByFirebaseUid(DEMO_ADMIN_UID)
+			.or(() -> userAccountRepository.findByEmail(DEMO_ADMIN_EMAIL))
+			.map(existing -> {
+				boolean changed = false;
+				if (existing.getRole() != UserRole.ADMIN) {
+					existing.changeRole(UserRole.ADMIN);
+					changed = true;
+				}
+				if (!DEMO_ADMIN_UID.equals(existing.getFirebaseUid())) {
+					existing.linkFirebaseAccount(DEMO_ADMIN_UID);
+					changed = true;
+				}
+				if (!DEMO_ADMIN_EMAIL.equals(existing.getEmail())) {
+					existing.updateProfile(existing.getName(), existing.getStudentId(), DEMO_ADMIN_EMAIL);
+					changed = true;
+				}
+				return changed ? userAccountRepository.save(existing) : existing;
+			})
+			.orElseGet(() -> userAccountRepository.save(
+				new UserAccount("Demo Admin", null, DEMO_ADMIN_EMAIL, DEMO_ADMIN_UID, UserRole.ADMIN)
 			));
 	}
 

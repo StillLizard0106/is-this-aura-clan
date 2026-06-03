@@ -78,6 +78,17 @@ public class StaffReportService {
 		);
 	}
 
+	@Transactional(readOnly = true)
+	public List<StaffStallReportResponse> getStallBreakdowns(FirebaseAuthenticationPrincipal principal, LocalDate startDate, LocalDate endDate) {
+		userAuthorizationService.requireRole(principal, UserRole.STAFF);
+		LocalDate effectiveStartDate = startDate != null ? startDate : LocalDate.now(clock);
+		LocalDate effectiveEndDate = endDate != null ? endDate : effectiveStartDate;
+		LocalDateTime start = effectiveStartDate.atStartOfDay();
+		LocalDateTime end = effectiveEndDate.atTime(LocalTime.MAX);
+		List<CanteenOrder> ordersInRange = orderRepository.findByCreatedAtBetween(start, end);
+		return buildStallBreakdowns(ordersInRange);
+	}
+
 	private List<StaffStallReportResponse> buildStallBreakdowns(List<CanteenOrder> ordersInRange) {
 		Map<java.util.UUID, StallAggregate> aggregates = new LinkedHashMap<>();
 		for (Stall stall : stallRepository.findAll()) {

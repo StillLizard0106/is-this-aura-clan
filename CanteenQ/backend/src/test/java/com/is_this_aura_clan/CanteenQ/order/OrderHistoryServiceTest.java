@@ -40,11 +40,11 @@ class OrderHistoryServiceTest {
 		MenuItem menuItem = new MenuItem(stall, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", true);
 		assignMenuItemId(menuItem, UUID.fromString("33333333-3333-3333-3333-333333333333"));
 
-		CanteenOrder activeOrder = new CanteenOrder(student, stall.getId(), new BigDecimal("45.00"), java.time.LocalDateTime.of(2026, 5, 30, 8, 20), 1);
+		CanteenOrder activeOrder = new CanteenOrder(student, stall, new BigDecimal("45.00"), java.time.LocalDateTime.of(2026, 5, 30, 8, 20), 1);
 		assignOrderId(activeOrder, UUID.fromString("44444444-4444-4444-4444-444444444444"));
 		activeOrder.addItem(new OrderItem(activeOrder, menuItem, 1, new BigDecimal("45.00")));
 
-		CanteenOrder historyOrder = new CanteenOrder(student, stall.getId(), new BigDecimal("90.00"), java.time.LocalDateTime.of(2026, 5, 29, 8, 20), 2);
+		CanteenOrder historyOrder = new CanteenOrder(student, stall, new BigDecimal("90.00"), java.time.LocalDateTime.of(2026, 5, 29, 8, 20), 2);
 		assignOrderId(historyOrder, UUID.fromString("55555555-5555-5555-5555-555555555555"));
 		assignStatus(historyOrder, OrderStatus.COMPLETED);
 		historyOrder.addItem(new OrderItem(historyOrder, menuItem, 2, new BigDecimal("90.00")));

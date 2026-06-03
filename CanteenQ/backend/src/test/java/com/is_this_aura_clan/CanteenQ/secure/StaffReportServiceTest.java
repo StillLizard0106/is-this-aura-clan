@@ -55,15 +55,15 @@ class StaffReportServiceTest {
 		MenuItem menuItem = new MenuItem(riceBowl, "Chicken Rice", "Rice with chicken", new BigDecimal("45.00"), "Meals", true);
 		assignMenuItemId(menuItem, UUID.fromString("55555555-5555-5555-5555-555555555555"));
 
-		CanteenOrder riceOrderOne = new CanteenOrder(studentOne, riceBowl.getId(), new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
+		CanteenOrder riceOrderOne = new CanteenOrder(studentOne, riceBowl, new BigDecimal("45.00"), LocalDateTime.of(2026, 5, 30, 8, 20), 1);
 		assignOrderId(riceOrderOne, UUID.fromString("66666666-6666-6666-6666-666666666666"));
 		riceOrderOne.addItem(new OrderItem(riceOrderOne, menuItem, 1, new BigDecimal("45.00")));
 
-		CanteenOrder riceOrderTwo = new CanteenOrder(studentTwo, riceBowl.getId(), new BigDecimal("30.00"), LocalDateTime.of(2026, 5, 30, 9, 20), 2);
+		CanteenOrder riceOrderTwo = new CanteenOrder(studentTwo, riceBowl, new BigDecimal("30.00"), LocalDateTime.of(2026, 5, 30, 9, 20), 2);
 		assignOrderId(riceOrderTwo, UUID.fromString("77777777-7777-7777-7777-777777777777"));
 		riceOrderTwo.addItem(new OrderItem(riceOrderTwo, menuItem, 1, new BigDecimal("30.00")));
 
-		CanteenOrder noodleOrder = new CanteenOrder(studentOne, noodleHouse.getId(), new BigDecimal("90.00"), LocalDateTime.of(2026, 5, 30, 10, 20), 3);
+		CanteenOrder noodleOrder = new CanteenOrder(studentOne, noodleHouse, new BigDecimal("90.00"), LocalDateTime.of(2026, 5, 30, 10, 20), 3);
 		assignOrderId(noodleOrder, UUID.fromString("88888888-8888-8888-8888-888888888888"));
 		noodleOrder.addItem(new OrderItem(noodleOrder, menuItem, 2, new BigDecimal("90.00")));
 

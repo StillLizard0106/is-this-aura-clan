@@ -27,13 +27,12 @@ public class AuthController {
 	) {
 		FirebaseAuthenticationResult authenticationResult = firebaseAuthService.authenticate(authorizationHeader);
 		UserAccount userAccount = userAccountSyncService.sync(authenticationResult.principal());
-		com.is_this_aura_clan.CanteenQ.account.UserRole role = userAccount == null ? null : userAccount.getRole();
 		return ResponseEntity.ok(
 			new FirebaseAuthenticationResult(
 				authenticationResult.authenticated(),
 				authenticationResult.principal(),
 				authenticationResult.message(),
-				role
+				userAccount == null ? null : userAccount.getRole()
 			)
 		);
 	}
